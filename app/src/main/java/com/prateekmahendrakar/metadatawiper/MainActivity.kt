@@ -15,7 +15,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +30,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +39,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,7 +70,9 @@ import kotlin.io.path.createTempFile
 
 // Enum to represent theme options
 enum class Theme {
-    System, Light, Dark
+    System,
+    Light,
+    Dark
 }
 
 // ViewModel to handle theme settings persistence
@@ -76,6 +81,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     // A private mutable state flow that can be updated from within the ViewModel
     private val _theme = MutableStateFlow(Theme.System)
+
     // The public, immutable state flow that the UI will observe
     val theme: StateFlow<Theme> = _theme
 
@@ -98,6 +104,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
 
@@ -129,62 +136,71 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    text = "Metadata Wiper",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            },
+                            actions = {
+                                SettingsButton(onClick = { showSettingsDialog = true })
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                                actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                ) { padding ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .padding(padding)
                             .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                     ) {
-                        // --- Top Bar with Settings ---
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            SettingsButton(
-                                onClick = { showSettingsDialog = true },
-                                modifier = Modifier.align(Alignment.CenterEnd)
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        ) {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // --- Action Buttons ---
-                            ActionButtons(
-                                cleanedFile = cleanedFile,
-                                hasRemovableExif = hasRemovableExifData,
-                                isEnabled = selectedImageUri != null,
-                                onImageSelected = { uri, metadata, file, hasRemovable ->
-                                    selectedImageUri = uri
-                                    cleanedFile = file
-                                    metadataMap = metadata
-                                    hasRemovableExifData = hasRemovable
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // --- Content Area ---
-                            if (selectedImageUri != null) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(selectedImageUri),
-                                    contentDescription = "Selected Image",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                MetadataTable(metadata = metadataMap)
-                            } else {
-                                Text(
-                                    text = "Select an image to view its metadata and remove it.",
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(16.dp)
-                                )
+                        // --- Action Buttons ---
+                        ActionButtons(
+                            cleanedFile = cleanedFile,
+                            hasRemovableExif = hasRemovableExifData,
+                            isEnabled = selectedImageUri != null,
+                            onImageSelected = { uri, metadata, file, hasRemovable ->
+                                selectedImageUri = uri
+                                cleanedFile = file
+                                metadataMap = metadata
+                                hasRemovableExifData = hasRemovable
                             }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // --- Content Area ---
+                        if (selectedImageUri != null) {
+                            Image(
+                                painter = rememberAsyncImagePainter(selectedImageUri),
+                                contentDescription = "Selected Image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
+                            MetadataTable(metadata = metadataMap)
+                        } else {
+                            Text(
+                                text = "Select an image to view and remove its metadata.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -194,7 +210,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    IconButton(onClick = onClick, modifier = modifier.padding(8.dp)) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(Icons.Default.Settings, contentDescription = "Settings")
     }
 }
@@ -329,7 +345,7 @@ fun ActionButtons(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Button(onClick = { openImageLauncher.launch(arrayOf("image/*")) }) {
+        FilledTonalButton(onClick = { openImageLauncher.launch(arrayOf("image/*")) }) {
             Text(text = "Open Image")
         }
         Spacer(modifier = Modifier.padding(8.dp))
@@ -366,7 +382,9 @@ fun MetadataTable(metadata: Map<String, String>) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             metadata.entries.forEach { (key, value) ->
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)) {
                     Text(key, modifier = Modifier.weight(1f))
                     Text(value, modifier = Modifier.weight(1f))
                 }
@@ -433,3 +451,4 @@ fun Preview() {
         }
     }
 }
+
