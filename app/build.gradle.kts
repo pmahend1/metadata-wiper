@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.metadatawiper"
+    namespace = "com.prateekmahendrakar.metadatawiper"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.metadatawiper"
+        applicationId = "com.prateekmahendrakar.metadatawiper"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.coil.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

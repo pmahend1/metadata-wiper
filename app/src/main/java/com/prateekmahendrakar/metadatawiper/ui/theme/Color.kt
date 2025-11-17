@@ -1,4 +1,4 @@
-package com.example.metadatawiper.ui.theme
+package com.prateekmahendrakar.metadatawiper.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

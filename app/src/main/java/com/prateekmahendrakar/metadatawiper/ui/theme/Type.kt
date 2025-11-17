@@ -1,4 +1,4 @@
-package com.example.metadatawiper.ui.theme
+package com.prateek.mahendrakar.metadatawiper.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

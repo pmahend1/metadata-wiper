@@ -1,4 +1,4 @@
-package com.example.metadatawiper
+package com.prateek.mahendrakar.metadatawiper
 
 import org.junit.Test
 
