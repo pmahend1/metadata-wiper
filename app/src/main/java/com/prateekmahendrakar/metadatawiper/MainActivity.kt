@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,38 +15,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,6 +104,7 @@ class MainActivity : ComponentActivity() {
                 var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
                 var cleanedFile by remember { mutableStateOf<File?>(null) }
                 var showSettingsDialog by remember { mutableStateOf(false) }
+                var suggestedFileName by remember { mutableStateOf("cleaned_file.jpg") }
 
 
                 if (showSettingsDialog) {
@@ -171,11 +150,13 @@ class MainActivity : ComponentActivity() {
                             cleanedFile = cleanedFile,
                             hasRemovableExif = hasRemovableExifData,
                             isEnabled = selectedImageUri != null,
-                            onImageSelected = { uri, metadata, file, hasRemovable ->
+                            suggestedFileName = suggestedFileName,
+                            onImageSelected = { uri, metadata, file, hasRemovable, fileName ->
                                 selectedImageUri = uri
                                 cleanedFile = file
                                 metadataMap = metadata
                                 hasRemovableExifData = hasRemovable
+                                suggestedFileName = fileName
                             }
                         )
 
@@ -266,13 +247,13 @@ fun SettingsDialog(
     }
 }
 
-
 @Composable
 fun ActionButtons(
     cleanedFile: File?,
     hasRemovableExif: Boolean,
     isEnabled: Boolean,
-    onImageSelected: (Uri, HashMap<String, String>, File, Boolean) -> Unit
+    suggestedFileName: String,
+    onImageSelected: (Uri, HashMap<String, String>, File, Boolean, String) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -296,7 +277,8 @@ fun ActionButtons(
                     }
 
                     val removableTags = getRemovableExifTags()
-                    val hasRemovableData = removableTags.any { tag -> exifReader.getAttribute(tag) != null }
+                    val hasRemovableData =
+                        removableTags.any { tag -> exifReader.getAttribute(tag) != null }
 
                     val cleanedTempFile = createTempFile().toFile()
                     originalTempFile.copyTo(cleanedTempFile, overwrite = true)
@@ -309,7 +291,23 @@ fun ActionButtons(
                         exifWriter.saveAttributes()
                     }
 
-                    onImageSelected(it, displayHashMap, cleanedTempFile, hasRemovableData)
+                    val originalFileName = getFileName(context, it) ?: "cleaned_file.jpg"
+                    val newFileName = originalFileName.let {
+                        val dotIndex = it.lastIndexOf('.')
+                        if (dotIndex != -1) {
+                            it.substring(0, dotIndex) + "_cleaned" + it.substring(dotIndex)
+                        } else {
+                            it + "_cleaned"
+                        }
+                    }
+
+                    onImageSelected(
+                        it,
+                        displayHashMap,
+                        cleanedTempFile,
+                        hasRemovableData,
+                        newFileName
+                    )
 
                 } catch (e: IOException) {
                     Log.e("TAG", "Error processing file", e)
@@ -320,17 +318,18 @@ fun ActionButtons(
     )
 
     val saveFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("image/jpeg"),
+        contract = ActivityResultContracts.CreateDocument("image/*"),
         onResult = { uri: Uri? ->
             uri?.let { saveUri ->
                 cleanedFile?.let { file ->
                     try {
-                        context.contentResolver.openOutputStream(saveUri).use { outputStream ->
+                        context.contentResolver.openOutputStream(saveUri)?.let { outputStream ->
                             file.inputStream().use { inputStream ->
-                                inputStream.copyTo(outputStream!!)
+                                inputStream.copyTo(outputStream)
                             }
                         }
-                        Toast.makeText(context, "Image saved successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Image saved successfully!", Toast.LENGTH_SHORT)
+                            .show()
                     } catch (e: IOException) {
                         Log.e("TAG", "Failed to save file", e)
                         Toast.makeText(context, "Failed to save image.", Toast.LENGTH_SHORT).show()
@@ -351,7 +350,7 @@ fun ActionButtons(
         Spacer(modifier = Modifier.padding(8.dp))
         if (isEnabled) {
             if (hasRemovableExif) {
-                Button(onClick = { saveFileLauncher.launch("cleaned_image.jpg") }) {
+                Button(onClick = { saveFileLauncher.launch(suggestedFileName) }) {
                     Text(text = "Remove Exif data")
                 }
             } else {
@@ -382,9 +381,11 @@ fun MetadataTable(metadata: Map<String, String>) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             metadata.entries.forEach { (key, value) ->
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
                     Text(key, modifier = Modifier.weight(1f))
                     Text(value, modifier = Modifier.weight(1f))
                 }
@@ -392,6 +393,19 @@ fun MetadataTable(metadata: Map<String, String>) {
             }
         }
     }
+}
+
+fun getFileName(context: Context, uri: Uri): String? {
+    var fileName: String? = null
+    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex != -1) {
+                fileName = cursor.getString(nameIndex)
+            }
+        }
+    }
+    return fileName
 }
 
 fun getEssentialExifTags(): Set<String> {
@@ -444,11 +458,11 @@ fun Preview() {
             ActionButtons(
                 cleanedFile = null,
                 hasRemovableExif = true,
-                isEnabled = true
-            ) { _, _, _, _ -> }
+                isEnabled = true,
+                suggestedFileName = "my_photo_cleaned.jpg"
+            ) { _, _, _, _, _ -> }
             Spacer(modifier = Modifier.height(16.dp))
             MetadataTable(metadata = sampleMetadata)
         }
     }
 }
-
