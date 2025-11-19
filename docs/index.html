@@ -1,49 +1,56 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>metadata-wiper — Documentation</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>metadata-wiper — Documentation</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <h1><a href="/">metadata-wiper</a></h1>
-      <nav class="nav">
-        <button id="btn-readme">README</button>
-        <button id="btn-privacy">Privacy Policy</button>
-      </nav>
-    </div>
-  </header>
+    <header class="site-header">
+        <div class="wrap">
+            <h1><a href="index.html">Metadata Wiper</a></h1>
+            <nav class="nav">
+                <button id="btn-readme">README</button>
+                <button id="btn-privacy">Privacy Policy</button>
+            </nav>
+        </div>
+    </header>
 
-  <main class="wrap">
-    <article id="content">Loading…</article>
-  </main>
+    <main class="wrap">
+        <article id="content">Loading…</article>
+    </main>
 
-  <footer class="site-footer">
-    <div class="wrap">This site renders the repository README and Privacy Policy. Edit files in <code>docs/</code> and push to <code>main</code>.</div>
-  </footer>
+    <footer class="site-footer">
+        <div class="wrap">This site renders the repository README and Privacy Policy. Edit files in <code>docs/</code>
+            and push to <code>main</code>.</div>
+    </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    const contentEl = document.getElementById('content');
-    async function load(mdPath){
-      try{
-        const res = await fetch(mdPath);
-        if(!res.ok) throw new Error('Fetch failed');
-        const md = await res.text();
-        contentEl.innerHTML = marked.parse(md);
-      }catch(e){
-        contentEl.innerHTML = '<p>Unable to load content. You can view the raw file <a href="'+mdPath+'">here</a>.</p>';
-      }
-    }
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const contentEl = document.getElementById('content');
+        async function load(mdPath)
+        {
+            try
+            {
+                const res = await fetch(mdPath);
+                if (!res.ok) throw new Error('Fetch failed');
+                const md = await res.text();
+                contentEl.innerHTML = marked.parse(md);
+            } catch (e)
+            {
+                contentEl.innerHTML = '<p>Unable to load content. You can view the raw file <a href="' + mdPath + '">here</a>.</p>';
+            }
+        }
 
-    document.getElementById('btn-readme').addEventListener('click', ()=> load('README.md'));
-    document.getElementById('btn-privacy').addEventListener('click', ()=> load('PrivacyPolicy.md'));
+        document.getElementById('btn-readme').addEventListener('click', () => load('README.md'));
+        document.getElementById('btn-privacy').addEventListener('click', () => { location.href = 'privacy-policy.html'; });
 
-    // Load README by default
-    load('README.md');
-  </script>
+        // Load README by default
+        load('README.md');
+    </script>
 </body>
+
 </html>
