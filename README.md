@@ -1,3 +1,3 @@
 # Metadata Wiper for Android
 
-[See here](https://github.com/pmahend1/metadata-wiper)
+[See here](https://pmahend1.github.io/metadata-wiper/)
