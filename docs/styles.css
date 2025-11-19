@@ -79,26 +79,30 @@ pre {
     padding: 12px 16px;
     border-radius: 8px;
     margin: 12px 0;
-    background: #f1f5f9;
-    border: 1px solid #e6eef6;
+    background: #f8fbff;
+    border: 1px solid rgba(11,95,255,0.08);
     align-items: flex-start;
+    border-left: 4px solid var(--accent);
 }
 .callout .callout-icon {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #eaf3ff;
-    color: #0b5fff;
-    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    border-radius: 50%;
+    border: 1px solid rgba(11,95,255,0.18);
 }
 .callout .callout-body {
     flex: 1 1 auto;
 }
 .callout.note { border-left: 4px solid #cfe3ff; }
-.callout.note .callout-icon { background: #eaf3ff; color: #0b5fff }
+.callout.note .callout-icon { background: transparent; color: var(--accent) }
+.callout .callout-title{ display:block; color:var(--accent); font-weight:600; margin:0 0 6px; }
+.callout .callout-body p{ margin:0 0 0.5rem; }
 
 .site-footer {
     padding: 12px 0;

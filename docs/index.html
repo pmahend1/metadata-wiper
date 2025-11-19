@@ -70,7 +70,10 @@
                 const innerHtml = marked.parse(contentMd);
                 const calloutHtml = '\n<div class="callout note">'
                     + '<div class="callout-icon" aria-hidden="true">&#9432;</div>'
-                    + '<div class="callout-body">' + innerHtml + '</div>'
+                    + '<div class="callout-body">'
+                    + '<span class="callout-title">Note</span>'
+                    + innerHtml
+                    + '</div>'
                     + '</div>\n';
                 out.push(calloutHtml);
                 i = j; // advance
