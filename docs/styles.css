@@ -72,6 +72,34 @@ pre {
     border-radius: 6px
 }
 
+/* Callout / note styling similar to GitHub discussions */
+.callout {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+    background: #f1f5f9;
+    border: 1px solid #e6eef6;
+    align-items: flex-start;
+}
+.callout .callout-icon {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eaf3ff;
+    color: #0b5fff;
+    border-radius: 6px;
+}
+.callout .callout-body {
+    flex: 1 1 auto;
+}
+.callout.note { border-left: 4px solid #cfe3ff; }
+.callout.note .callout-icon { background: #eaf3ff; color: #0b5fff }
+
 .site-footer {
     padding: 12px 0;
     color: var(--muted);

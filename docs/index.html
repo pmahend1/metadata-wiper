@@ -32,7 +32,8 @@
             {
                 const res = await fetch(mdPath);
                 if (!res.ok) throw new Error('Fetch failed');
-                const md = await res.text();
+                let md = await res.text();
+                md = preprocessAdmonitions(md);
                 contentEl.innerHTML = marked.parse(md);
             } catch (e)
             {
@@ -40,11 +41,45 @@
             }
         }
 
-        document.getElementById('btn-readme').addEventListener('click', () => load('README.md'));
+        document.getElementById('btn-readme').addEventListener('click', () => load('site-readme.md'));
         document.getElementById('btn-privacy').addEventListener('click', () => { location.href = 'privacy-policy.html'; });
 
-        // Load README by default
-        load('README.md');
+        // Load site README by default
+        load('site-readme.md');
+
+    // Convert [!NOTE] blockquotes into styled HTML callouts before parsing
+    function preprocessAdmonitions(mdRaw){
+        const lines = mdRaw.split('\n');
+        const out = [];
+        for(let i=0;i<lines.length;i++){
+            const line = lines[i].trim();
+            // Handle blockquote-style: "> [!NOTE]" or plain "[!NOTE]"
+            if(line === '> [!NOTE]' || line === '[!NOTE]'){
+                // collect subsequent lines belonging to the note
+                let j = i+1;
+                const collected = [];
+                while(j < lines.length){
+                    const l = lines[j];
+                    if(l.trim().length === 0) break; // stop at blank line
+                    // remove leading "> " if present
+                    collected.push(l.replace(/^>\s?/, ''));
+                    j++;
+                }
+                const contentMd = collected.join('\n');
+                // parse inner markdown to HTML
+                const innerHtml = marked.parse(contentMd);
+                const calloutHtml = '\n<div class="callout note">'
+                    + '<div class="callout-icon" aria-hidden="true">&#9432;</div>'
+                    + '<div class="callout-body">' + innerHtml + '</div>'
+                    + '</div>\n';
+                out.push(calloutHtml);
+                i = j; // advance
+                continue;
+            }
+            out.push(lines[i]);
+        }
+        return out.join('\n');
+    }
     </script>
     <footer class="site-footer">
         <div class="wrap">This site renders the repository README and Privacy Policy. For code please see <a

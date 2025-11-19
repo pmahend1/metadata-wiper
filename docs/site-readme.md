@@ -16,7 +16,7 @@ A simple, private, and modern Android application to remove EXIF metadata from y
 * **No Unnecessary Permissions:** Uses the modern Android Storage Access Framework, requiring no broad storage permissions.
 
 > [!NOTE]
-> For detailed information about the app's privacy practices, please refer to the [Privacy Policy](docs/privacy-policy.html).
+> For detailed information about the app's privacy practices, please refer to the [Privacy Policy](privacy-policy.html).
 
 ## 🛠️ Built With
 
