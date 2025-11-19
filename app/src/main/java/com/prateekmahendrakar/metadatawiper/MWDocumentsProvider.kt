@@ -15,7 +15,7 @@ import java.io.IOException
 class MWDocumentsProvider : DocumentsProvider() {
 
     private companion object {
-        private const val TAG = "MyDocumentsProvider"
+        private const val TAG = "DocumentsProvider"
         private const val ROOT = "root"
 
         private val defaultRootProjection = arrayOf(
@@ -41,7 +41,7 @@ class MWDocumentsProvider : DocumentsProvider() {
     override fun onCreate(): Boolean {
         // Initialize your base directory — for example, app’s files dir
         context?.let {
-            mBaseDir = File(it.filesDir, "mydocs")
+            mBaseDir = File(it.filesDir, "files")
             if (!mBaseDir.exists()) mBaseDir.mkdirs()
         }
         return true
@@ -53,7 +53,7 @@ class MWDocumentsProvider : DocumentsProvider() {
         val row = result.newRow()
         row.add(DocumentsContract.Root.COLUMN_ROOT_ID, ROOT)
         row.add(DocumentsContract.Root.COLUMN_DOCUMENT_ID, ROOT)
-        row.add(DocumentsContract.Root.COLUMN_TITLE, "My Documents")
+        row.add(DocumentsContract.Root.COLUMN_TITLE, "Files")
         row.add(
             DocumentsContract.Root.COLUMN_FLAGS,
             DocumentsContract.Root.FLAG_LOCAL_ONLY or DocumentsContract.Root.FLAG_SUPPORTS_CREATE
@@ -137,7 +137,10 @@ class MWDocumentsProvider : DocumentsProvider() {
         row.add(DocumentsContract.Document.COLUMN_DISPLAY_NAME, file.name)
         row.add(DocumentsContract.Document.COLUMN_SIZE, file.length())
         row.add(DocumentsContract.Document.COLUMN_MIME_TYPE, getMimeType(file))
-        row.add(DocumentsContract.Document.COLUMN_FLAGS, if (file.isDirectory) DocumentsContract.Document.FLAG_DIR_PREFERS_GRID else 0)
+        row.add(
+            DocumentsContract.Document.COLUMN_FLAGS,
+            if (file.isDirectory) DocumentsContract.Document.FLAG_DIR_PREFERS_GRID else 0
+        )
         row.add(DocumentsContract.Document.COLUMN_LAST_MODIFIED, file.lastModified())
     }
 

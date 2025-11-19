@@ -15,8 +15,8 @@ android {
         applicationId = "com.prateekmahendrakar.metadatawiper"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 12
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,7 +34,7 @@ android {
         // rename the output APK file
         outputs.configureEach {
             (this as? ApkVariantOutputImpl)?.outputFileName =
-                "${rootProject.name}_${versionName}(${versionCode})_${buildType.name}.apk"
+                "${rootProject.name}_${versionName}_${buildType.name}.apk"
         }
 
         // rename the output AAB file
@@ -46,7 +46,7 @@ android {
             val finalFile =
                 File(
                     file.parentFile,
-                    "${rootProject.name}_$versionName($versionCode)_${buildType.name}.aab"
+                    "${rootProject.name}_${versionName}_${buildType.name}.aab"
                 )
             finalBundleFile.set(finalFile)
         }

@@ -2,6 +2,7 @@ package com.prateekmahendrakar.metadatawiper
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -168,6 +169,7 @@ class MainActivity : ComponentActivity() {
                                 painter = rememberAsyncImagePainter(selectedImageUri),
                                 contentDescription = "Selected Image",
                                 modifier = Modifier
+                                    .defaultMinSize(250.dp, minHeight = 250.dp)
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                             )
@@ -277,8 +279,7 @@ fun ActionButtons(
                     }
 
                     val removableTags = getRemovableExifTags()
-                    val hasRemovableData =
-                        removableTags.any { tag -> exifReader.getAttribute(tag) != null }
+                    val hasRemovableData = removableTags.any { tag -> exifReader.getAttribute(tag) != null }
 
                     val cleanedTempFile = createTempFile().toFile()
                     originalTempFile.copyTo(cleanedTempFile, overwrite = true)
