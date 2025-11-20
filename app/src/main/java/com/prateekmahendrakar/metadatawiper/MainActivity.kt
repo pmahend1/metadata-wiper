@@ -2,7 +2,6 @@ package com.prateekmahendrakar.metadatawiper
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -24,8 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -169,7 +166,7 @@ class MainActivity : ComponentActivity() {
                                 painter = rememberAsyncImagePainter(selectedImageUri),
                                 contentDescription = "Selected Image",
                                 modifier = Modifier
-                                    .defaultMinSize(250.dp, minHeight = 250.dp)
+                                    .defaultMinSize(minWidth = 200.dp, minHeight = 200.dp)
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
                             )
@@ -249,6 +246,7 @@ fun SettingsDialog(
     }
 }
 
+
 @Composable
 fun ActionButtons(
     cleanedFile: File?,
@@ -279,7 +277,8 @@ fun ActionButtons(
                     }
 
                     val removableTags = getRemovableExifTags()
-                    val hasRemovableData = removableTags.any { tag -> exifReader.getAttribute(tag) != null }
+                    val hasRemovableData =
+                        removableTags.any { tag -> exifReader.getAttribute(tag) != null }
 
                     val cleanedTempFile = createTempFile().toFile()
                     originalTempFile.copyTo(cleanedTempFile, overwrite = true)
@@ -375,9 +374,15 @@ fun MetadataTable(metadata: Map<String, String>) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth()) {
+
+            HorizontalDivider()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
                 Text("Tag", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                Text("Value", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                Text("Value(${metadata.size})", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -441,29 +446,58 @@ fun getRemovableExifTags(): Array<String> {
     return getAllExifTags().filterNot { it in essentialTags }.toTypedArray()
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-fun Preview() {
+fun MainScreenPreview() {
     MetaDataWiperTheme {
-        val sampleMetadata = hashMapOf(
-            "TAG_MAKE" to "Google",
-            "TAG_MODEL" to "Pixel 8",
-            "TAG_FOCAL_LENGTH" to "24mm"
-        )
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            ActionButtons(
-                cleanedFile = null,
-                hasRemovableExif = true,
-                isEnabled = true,
-                suggestedFileName = "my_photo_cleaned.jpg"
-            ) { _, _, _, _, _ -> }
-            Spacer(modifier = Modifier.height(16.dp))
-            MetadataTable(metadata = sampleMetadata)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Metadata Wiper",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    actions = {
+                        SettingsButton(onClick = { })
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
+        ) { padding ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ActionButtons(
+                    cleanedFile = null,
+                    hasRemovableExif = false,
+                    isEnabled = false,
+                    suggestedFileName = "cleaned_file.jpg",
+                    onImageSelected = { _, _, _, _, _ -> }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Select an image to view and remove its metadata.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
     }
 }
