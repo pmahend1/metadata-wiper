@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">Limpiador de Metadatos</string>
     <string name="settings">Ajustes</string>
     <string name="select_images_prompt">Selecciona una o más imágenes para ver y eliminar sus metadatos. (Pista: puede que tengas que mantener pulsada una imagen para seleccionar varios archivos)</string>
     <string name="selected_image">Imagen Seleccionada</string>
