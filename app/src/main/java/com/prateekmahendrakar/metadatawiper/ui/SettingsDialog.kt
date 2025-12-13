@@ -42,7 +42,8 @@ fun SettingsDialog(
     onThemeChange: (Theme) -> Unit,
     onDismiss: () -> Unit,
     currentOverwriteOriginal: Boolean,
-    onOverwriteOriginalChange: (Boolean) -> Unit
+    onOverwriteOriginalChange: (Boolean) -> Unit,
+    appVersion: String
 ) {
     var tempTheme by remember { mutableStateOf(currentTheme) }
     var tempOverwrite by remember { mutableStateOf(currentOverwriteOriginal) }
@@ -111,7 +112,10 @@ fun SettingsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(id = R.string.overwrite_original_file), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(id = R.string.overwrite_original_file),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                         Switch(
                             checked = tempOverwrite,
                             onCheckedChange = { tempOverwrite = it }
@@ -184,6 +188,25 @@ fun SettingsDialog(
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- App Version Section ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.app_version),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = appVersion,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
 

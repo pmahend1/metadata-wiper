@@ -37,7 +37,11 @@ fun MetadataTable(metadata: Map<String, String>) {
                     .padding(top = 8.dp)
             ) {
                 Text(stringResource(id = R.string.tag), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
-                Text(stringResource(id = R.string.value_with_count, metadata.size), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(id = R.string.value_with_count, metadata.size),
+                    modifier = Modifier.weight(1f),
+                    fontWeight = FontWeight.Bold
+                )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

@@ -1,5 +1,7 @@
 package com.prateekmahendrakar.metadatawiper
 
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -60,6 +62,8 @@ class MainActivity : ComponentActivity() {
                 var originalFileNames by remember { mutableStateOf<List<String>>(emptyList()) }
                 var showSettingsDialog by remember { mutableStateOf(false) }
 
+                val packageInfo: PackageInfo = packageManager.getPackageInfo(packageName, 0)
+                val versionName = packageInfo.versionName
 
                 if (showSettingsDialog) {
                     SettingsDialog(
@@ -67,7 +71,8 @@ class MainActivity : ComponentActivity() {
                         onThemeChange = { settingsViewModel.setTheme(it) },
                         onDismiss = { showSettingsDialog = false },
                         currentOverwriteOriginal = overwriteOriginal,
-                        onOverwriteOriginalChange = { settingsViewModel.setOverwriteOriginal(it) }
+                        onOverwriteOriginalChange = { settingsViewModel.setOverwriteOriginal(it) },
+                        appVersion = versionName ?: ""
                     )
                 }
 

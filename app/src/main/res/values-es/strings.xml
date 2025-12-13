@@ -21,6 +21,7 @@
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="privacy_policy">Política de Privacidad</string>
+    <string name="app_version">Versión de la App</string>
     <plurals name="images_selected">
         <item quantity="one">%d imagen seleccionada.</item>
         <item quantity="other">%d imágenes seleccionadas.</item>
