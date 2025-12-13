@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Limpiador de Metadatos</string>
+    <string name="settings">Ajustes</string>
+    <string name="select_images_prompt">Selecciona una o más imágenes para ver y eliminar sus metadatos. (Pista: puede que tengas que mantener pulsada una imagen para seleccionar varios archivos)</string>
+    <string name="selected_image">Imagen Seleccionada</string>
+    <string name="theme">Tema</string>
+    <string name="file_options">Opciones de Archivo</string>
+    <string name="overwrite_original_file">Sobrescribir archivo original</string>
+    <string name="rate_and_review">Calificar y opinar</string>
+    <string name="close">Cerrar</string>
+    <string name="select_images">Seleccionar Imagen(es)</string>
+    <string name="remove_exif_data">Eliminar datos Exif</string>
+    <string name="no_removable_exif_data">No se encontraron datos Exif eliminables.</string>
+    <string name="error_processing_files">Error al procesar los archivos.</string>
+    <string name="image_saved_successfully">¡Imagen guardada correctamente!</string>
+    <string name="failed_to_save_file">Error al guardar el archivo.</string>
+    <string name="images_saved_successfully">¡Imágenes guardadas correctamente!</string>
+    <string name="failed_to_save_images">Error al guardar las imágenes.</string>
+    <string name="no_exif_data_found">No se encontraron datos Exif en la imagen seleccionada.</string>
+    <string name="tag">Etiqueta</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Oscuro</string>
+    <string name="privacy_policy">Política de Privacidad</string>
+    <plurals name="images_selected">
+        <item quantity="one">%d imagen seleccionada.</item>
+        <item quantity="other">%d imágenes seleccionadas.</item>
+    </plurals>
+    <plurals name="remove_exif_from_images">
+        <item quantity="one">Eliminar Exif de %d imagen</item>
+        <item quantity="other">Eliminar Exif de %d imágenes</item>
+    </plurals>
+    <string name="value_with_count">Valor(%d)</string>
+</resources>
