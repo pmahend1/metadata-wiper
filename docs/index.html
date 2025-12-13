@@ -15,6 +15,7 @@
             <nav class="nav">
                 <button id="btn-readme">README</button>
                 <button id="btn-privacy">Privacy Policy</button>
+                <button id="btn-changelog">Changelog</button>
             </nav>
         </div>
     </header>
@@ -43,6 +44,7 @@
 
         document.getElementById('btn-readme').addEventListener('click', () => load('site-readme.md'));
         document.getElementById('btn-privacy').addEventListener('click', () => { location.href = 'privacy-policy.html'; });
+        document.getElementById('btn-changelog').addEventListener('click', () => { location.href = 'changelog.html'; });
 
         // Load site README by default
         load('site-readme.md');
