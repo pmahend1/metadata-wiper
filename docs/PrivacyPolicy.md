@@ -18,10 +18,12 @@ This includes:
 
 The function of Metadata Wiper is to remove EXIF (Exchangeable Image File Format) metadata from images you select. The process is entirely offline:
 
-1. **File Selection:** The App uses the standard Android Storage Access Framework for you to select an image from your device's local storage. The App only gains temporary, user-consented access to the specific file you choose.
+1. **File Selection:** The App uses the standard Android Storage Access Framework for you to select one or more images from your device's local storage. The App only gains temporary, user-consented access to the specific files you choose.
 2. **Local Processing:** All metadata reading and removal happens entirely and exclusively on your device.
-3. **Saving the Cleaned File:** After processing, the App prompts you to choose a new location on your device to save the "cleaned" image. You have full control over where this file is saved.
-4. **No Original File Modification:** The App does not alter your original image file. It creates a new, separate copy with the metadata removed, leaving your original file untouched.
+3. **Saving the Cleaned File:** After processing, you have two options for saving the cleaned images:
+    - **Overwrite Mode:** If you enable this option in the settings, the App will overwrite the original files with the cleaned versions.
+    - **Create a New File:** If overwrite mode is disabled, the App will prompt you to choose a new location on your device to save the "cleaned" image(s). You have full control over where the files are saved.
+4. **No Original File Modification (by default):** The App does not alter your original image file unless you explicitly enable the overwrite option. By default, it creates a new, separate copy with the metadata removed, leaving your original file untouched.
 
 ## 3. Permissions Required
 
@@ -40,15 +42,20 @@ The App uses the following open-source libraries, which have been reviewed to en
 
 None of these libraries are used to collect or transmit personal user data from the App.
 
-### 5. Children's Privacy
+## 5. In-App Links
+
+- **Rate and Review:** The app includes a link to its Google Play Store page to allow you to provide a rating and review. This action is entirely optional and is initiated by you.
+- **Privacy Policy:** The app includes a link to this privacy policy for your convenience.
+
+### 6. Children's Privacy
 
 This App does not collect any personal information, making it safe for all users, including children. We do not knowingly collect any data from children under the age of 13.
 
-### 6. Changes to This Privacy Policy
+### 7. Changes to This Privacy Policy
 
 We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on the app's store listing. You are advised to review this Privacy Policy periodically for any changes.
 
-### 7. Contact Us
+### 8. Contact Us
 
 If you have any questions or suggestions about this Privacy Policy, do not hesitate to contact us.
 
