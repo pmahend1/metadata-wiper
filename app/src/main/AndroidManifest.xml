@@ -10,7 +10,7 @@
                  android:roundIcon="@mipmap/app_icon_round"
                  android:supportsRtl="true"
                  android:theme="@style/Theme.MetaDataWiper"
-                 tools:targetApi="35">
+                 tools:targetApi="36">
         <activity android:name=".MainActivity"
                   android:exported="true"
                   android:theme="@style/Theme.MetaDataWiper.Splash">
