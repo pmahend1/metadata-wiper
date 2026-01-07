@@ -174,8 +174,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
         }
 
         ExifInterface.TAG_COMPONENTS_CONFIGURATION -> {
-            val bytes = exif.getAttributeBytes(ExifInterface.TAG_COMPONENTS_CONFIGURATION)
-
+            val bytes = exif.getAttributeBytes(tag)
             val result = bytes?.take(4)?.joinToString(" ") {
                 when (it.toInt()) {
                     1 -> "Y"
@@ -323,6 +322,20 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
         ExifInterface.TAG_MAX_APERTURE_VALUE -> when (val apertureValue = exif.getAttributeDouble(tag, 0.0)) {
             apertureValue -> apertureValue.formatted()
             else -> ""
+        }
+
+        ExifInterface.TAG_GPS_VERSION_ID -> {
+            val bytes = exif.getAttributeBytes(tag)
+
+            val result = bytes?.toList()
+                ?.mapNotNull { byte ->
+                    when (val intVal = byte.toInt()) {
+                        0 -> null          // omit
+                        else -> intVal.toString()
+                    }
+                }?.joinToString(".")
+            return result ?: ""
+
         }
 
         else -> {

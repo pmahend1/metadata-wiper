@@ -25,36 +25,40 @@ fun MetadataTable(metadata: Map<String, String>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
-            HorizontalDivider()
+        Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp)
+                    .padding(top = 8.dp, start = 8.dp, end = 8.dp)
             ) {
-                Text(stringResource(id = R.string.tag), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(id = R.string.tag),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 6.dp),
+                    fontWeight = FontWeight.Bold
+                )
                 Text(
                     stringResource(id = R.string.value_with_count, metadata.size),
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.Bold
                 )
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            metadata.entries.forEach { (key, value) ->
-                if (value.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Text(key, modifier = Modifier.weight(1f))
-                        Text(value, modifier = Modifier.weight(1f))
-                    }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 2.dp)
+            val filteredEntries = metadata.entries.filter { it.value.isNotEmpty() }.sortedBy { it.key }
+            filteredEntries.forEachIndexed { index, (key, value) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp, horizontal = 12.dp)
+                ) {
+                    Text(key, modifier = Modifier.weight(1f))
+                    Text(value, modifier = Modifier.weight(1f))
+                }
+                if (index != filteredEntries.lastIndex) {
                     HorizontalDivider()
                 }
             }
