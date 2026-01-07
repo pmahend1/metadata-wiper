@@ -21,7 +21,7 @@ fun MetadataTable(metadata: Map<String, String>) {
         Text(stringResource(id = R.string.no_exif_data_found), modifier = Modifier.padding(16.dp))
         return
     }
-
+    val filteredEntries = metadata.entries.filter { it.value.isNotEmpty() }.sortedBy { it.key }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -42,13 +42,13 @@ fun MetadataTable(metadata: Map<String, String>) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    stringResource(id = R.string.value_with_count, metadata.size),
+                    stringResource(id = R.string.value_with_count, filteredEntries.size),
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.Bold
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 2.dp)
-            val filteredEntries = metadata.entries.filter { it.value.isNotEmpty() }.sortedBy { it.key }
+
             filteredEntries.forEachIndexed { index, (key, value) ->
                 Row(
                     modifier = Modifier
