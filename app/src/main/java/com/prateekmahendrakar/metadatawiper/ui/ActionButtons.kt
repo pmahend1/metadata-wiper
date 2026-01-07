@@ -1,6 +1,5 @@
 package com.prateekmahendrakar.metadatawiper.ui
 
-import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
@@ -26,6 +25,7 @@ import androidx.exifinterface.media.ExifInterface
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.utils.getAllExifTags
 import com.prateekmahendrakar.metadatawiper.utils.getFileName
+import com.prateekmahendrakar.metadatawiper.utils.getFormattedExifValue
 import com.prateekmahendrakar.metadatawiper.utils.getRemovableExifTags
 import java.io.File
 import java.io.IOException
@@ -53,7 +53,6 @@ fun ActionButtons(
         onResult = { uris: List<Uri> ->
             if (uris.isNotEmpty()) {
                 try {
-                    val allUris = uris
                     val allCleanedFiles = mutableListOf<File>()
                     val allOriginalFileNames = mutableListOf<String>()
                     val displayHashMap = HashMap<String, String>()
@@ -69,8 +68,7 @@ fun ActionButtons(
 
                         val exifReader = ExifInterface(originalTempFile.absolutePath)
                         val removableTags = getRemovableExifTags()
-                        val hasRemovableData =
-                            removableTags.any { tag -> exifReader.getAttribute(tag) != null }
+                        val hasRemovableData = removableTags.any { tag -> exifReader.getAttribute(tag) != null }
                         if (hasRemovableData) hasAnyRemovableData = true
 
                         val cleanedTempFile = createTempFile().toFile()
@@ -92,13 +90,14 @@ fun ActionButtons(
                         if (uris.size == 1) {
                             val allTags = getAllExifTags()
                             for (tag in allTags) {
-                                exifReader.getAttribute(tag)?.let { value -> displayHashMap[tag] = value }
+                                val stringValue = getFormattedExifValue(exifReader, tag)
+                                displayHashMap[tag] = stringValue
                             }
                         }
                     }
 
                     onImagesSelected(
-                        allUris,
+                        uris,
                         displayHashMap,
                         allCleanedFiles,
                         hasAnyRemovableData,
@@ -149,7 +148,8 @@ fun ActionButtons(
                         }
 
                         // Using DocumentsContract to create file
-                        val newFileUri = DocumentsContract.createDocument(context.contentResolver, it, "image/jpeg", newFileName)
+                        val newFileUri =
+                            DocumentsContract.createDocument(context.contentResolver, it, "image/jpeg", newFileName)
                         newFileUri?.let { docUri ->
                             context.contentResolver.openOutputStream(docUri)?.use { outputStream ->
                                 cleanedFile.inputStream().use { inputStream ->
@@ -210,7 +210,15 @@ fun ActionButtons(
                         }
                     }
                 }) {
-                    val buttonText = if (selectedImageUris.size > 1) pluralStringResource(id = R.plurals.remove_exif_from_images, count = selectedImageUris.size, selectedImageUris.size) else stringResource(id = R.string.remove_exif_data)
+                    val buttonText = if (selectedImageUris.size > 1) {
+                        pluralStringResource(
+                            id = R.plurals.remove_exif_from_images,
+                            count = selectedImageUris.size,
+                            selectedImageUris.size
+                        )
+                    } else {
+                        stringResource(id = R.string.remove_exif_data)
+                    }
                     Text(text = buttonText)
                 }
             } else {

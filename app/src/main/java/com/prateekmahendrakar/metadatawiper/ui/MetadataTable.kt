@@ -46,15 +46,17 @@ fun MetadataTable(metadata: Map<String, String>) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             metadata.entries.forEach { (key, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                ) {
-                    Text(key, modifier = Modifier.weight(1f))
-                    Text(value, modifier = Modifier.weight(1f))
+                if (value.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Text(key, modifier = Modifier.weight(1f))
+                        Text(value, modifier = Modifier.weight(1f))
+                    }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
             }
         }
     }
