@@ -18,22 +18,18 @@ class MWDocumentsProvider : DocumentsProvider() {
         private const val TAG = "DocumentsProvider"
         private const val ROOT = "root"
 
-        private val defaultRootProjection = arrayOf(
-            DocumentsContract.Root.COLUMN_ROOT_ID,
-            DocumentsContract.Root.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Root.COLUMN_TITLE,
-            DocumentsContract.Root.COLUMN_FLAGS,
-            DocumentsContract.Root.COLUMN_ICON
-        )
+        private val defaultRootProjection = arrayOf(DocumentsContract.Root.COLUMN_ROOT_ID,
+                                                    DocumentsContract.Root.COLUMN_DOCUMENT_ID,
+                                                    DocumentsContract.Root.COLUMN_TITLE,
+                                                    DocumentsContract.Root.COLUMN_FLAGS,
+                                                    DocumentsContract.Root.COLUMN_ICON)
 
-        private val defaultDocumentProjection = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_SIZE,
-            DocumentsContract.Document.COLUMN_MIME_TYPE,
-            DocumentsContract.Document.COLUMN_FLAGS,
-            DocumentsContract.Document.COLUMN_LAST_MODIFIED
-        )
+        private val defaultDocumentProjection = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                                                        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                                                        DocumentsContract.Document.COLUMN_SIZE,
+                                                        DocumentsContract.Document.COLUMN_MIME_TYPE,
+                                                        DocumentsContract.Document.COLUMN_FLAGS,
+                                                        DocumentsContract.Document.COLUMN_LAST_MODIFIED)
     }
 
     private lateinit var mBaseDir: File
@@ -54,10 +50,7 @@ class MWDocumentsProvider : DocumentsProvider() {
         row.add(DocumentsContract.Root.COLUMN_ROOT_ID, ROOT)
         row.add(DocumentsContract.Root.COLUMN_DOCUMENT_ID, ROOT)
         row.add(DocumentsContract.Root.COLUMN_TITLE, "Files")
-        row.add(
-            DocumentsContract.Root.COLUMN_FLAGS,
-            DocumentsContract.Root.FLAG_LOCAL_ONLY or DocumentsContract.Root.FLAG_SUPPORTS_CREATE
-        )
+        row.add(DocumentsContract.Root.COLUMN_FLAGS, DocumentsContract.Root.FLAG_LOCAL_ONLY or DocumentsContract.Root.FLAG_SUPPORTS_CREATE)
         row.add(DocumentsContract.Root.COLUMN_ICON, android.R.drawable.ic_menu_gallery)
         return result
     }
@@ -73,11 +66,7 @@ class MWDocumentsProvider : DocumentsProvider() {
     // endregion
 
     // region === Query Child Documents ===
-    override fun queryChildDocuments(
-        parentDocumentId: String,
-        projection: Array<out String>?,
-        sortOrder: String?
-    ): Cursor {
+    override fun queryChildDocuments(parentDocumentId: String, projection: Array<out String>?, sortOrder: String?): Cursor {
         val result = MatrixCursor(projection ?: defaultDocumentProjection)
         val parent = getFileForDocId(parentDocumentId)
         parent.listFiles()?.forEach { child ->
@@ -89,11 +78,7 @@ class MWDocumentsProvider : DocumentsProvider() {
 
     // region === Open Document ===
     @Throws(FileNotFoundException::class)
-    override fun openDocument(
-        documentId: String,
-        mode: String,
-        signal: CancellationSignal?
-    ): ParcelFileDescriptor {
+    override fun openDocument(documentId: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
         val file = getFileForDocId(documentId)
         val accessMode = ParcelFileDescriptor.parseMode(mode)
         val isWrite = mode.contains('w')
@@ -137,10 +122,7 @@ class MWDocumentsProvider : DocumentsProvider() {
         row.add(DocumentsContract.Document.COLUMN_DISPLAY_NAME, file.name)
         row.add(DocumentsContract.Document.COLUMN_SIZE, file.length())
         row.add(DocumentsContract.Document.COLUMN_MIME_TYPE, getMimeType(file))
-        row.add(
-            DocumentsContract.Document.COLUMN_FLAGS,
-            if (file.isDirectory) DocumentsContract.Document.FLAG_DIR_PREFERS_GRID else 0
-        )
+        row.add(DocumentsContract.Document.COLUMN_FLAGS, if (file.isDirectory) DocumentsContract.Document.FLAG_DIR_PREFERS_GRID else 0)
         row.add(DocumentsContract.Document.COLUMN_LAST_MODIFIED, file.lastModified())
     }
 

@@ -24,30 +24,20 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     applicationVariants.configureEach {
         // rename the output APK file
         outputs.configureEach {
-            (this as? ApkVariantOutputImpl)?.outputFileName =
-                "${rootProject.name}_${versionName}_${buildType.name}.apk"
+            (this as? ApkVariantOutputImpl)?.outputFileName = "${rootProject.name}_${versionName}_${buildType.name}.apk"
         }
 
         // rename the output AAB file
-        tasks.named(
-            "sign${flavorName.uppercaseFirstChar()}${buildType.name.uppercaseFirstChar()}Bundle",
-            com.android.build.gradle.internal.tasks.FinalizeBundleTask::class.java
-        ) {
+        tasks.named("sign${flavorName.uppercaseFirstChar()}${buildType.name.uppercaseFirstChar()}Bundle",
+                    com.android.build.gradle.internal.tasks.FinalizeBundleTask::class.java) {
             val file = finalBundleFile.asFile.get()
-            val finalFile =
-                File(
-                    file.parentFile,
-                    "${rootProject.name}_${versionName}_${buildType.name}.aab"
-                )
+            val finalFile = File(file.parentFile, "${rootProject.name}_${versionName}_${buildType.name}.aab")
             finalBundleFile.set(finalFile)
         }
     }

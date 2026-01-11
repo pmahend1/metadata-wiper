@@ -32,15 +32,13 @@ import java.io.IOException
 import kotlin.io.path.createTempFile
 
 @Composable
-fun ActionButtons(
-    cleanedFiles: List<File>,
-    hasRemovableExif: Boolean,
-    isEnabled: Boolean,
-    originalFileNames: List<String>,
-    onImagesSelected: (List<Uri>, HashMap<String, String>, List<File>, Boolean, List<String>) -> Unit,
-    overwriteOriginal: Boolean,
-    selectedImageUris: List<Uri>
-) {
+fun ActionButtons(cleanedFiles: List<File>,
+                  hasRemovableExif: Boolean,
+                  isEnabled: Boolean,
+                  originalFileNames: List<String>,
+                  onImagesSelected: (List<Uri>, HashMap<String, String>, List<File>, Boolean, List<String>) -> Unit,
+                  overwriteOriginal: Boolean,
+                  selectedImageUris: List<Uri>) {
     val context = LocalContext.current
     val errorProcessingFiles = stringResource(id = R.string.error_processing_files)
     val imageSavedSuccessfully = stringResource(id = R.string.image_saved_successfully)
@@ -48,9 +46,8 @@ fun ActionButtons(
     val failedToSaveFile = stringResource(id = R.string.failed_to_save_file)
     val failedToSaveImages = stringResource(id = R.string.failed_to_save_images)
 
-    val openImagesLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments(),
-        onResult = { uris: List<Uri> ->
+    val openImagesLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(), onResult = { uris: List<Uri> ->
             if (uris.isNotEmpty()) {
                 try {
                     val allCleanedFiles = mutableListOf<File>()
@@ -96,82 +93,63 @@ fun ActionButtons(
                         }
                     }
 
-                    onImagesSelected(
-                        uris,
-                        displayHashMap,
-                        allCleanedFiles,
-                        hasAnyRemovableData,
-                        allOriginalFileNames
-                    )
+                    onImagesSelected(uris, displayHashMap, allCleanedFiles, hasAnyRemovableData, allOriginalFileNames)
 
                 } catch (e: IOException) {
                     Log.e("TAG", "Error processing files", e)
                     Toast.makeText(context, errorProcessingFiles, Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    )
+        })
 
-    val saveFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("image/*"),
-        onResult = { uri: Uri? ->
-            uri?.let { saveUri ->
-                cleanedFiles.firstOrNull()?.let { file ->
-                    try {
-                        context.contentResolver.openOutputStream(saveUri)?.use { outputStream ->
-                            file.inputStream().use { inputStream ->
+    val saveFileLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.CreateDocument("image/*"), onResult = { uri: Uri? ->
+        uri?.let { saveUri ->
+            cleanedFiles.firstOrNull()?.let { file ->
+                try {
+                    context.contentResolver.openOutputStream(saveUri)?.use { outputStream ->
+                        file.inputStream().use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    Toast.makeText(context, imageSavedSuccessfully, Toast.LENGTH_SHORT).show()
+                } catch (e: IOException) {
+                    Log.e("TAG", "Failed to save file", e)
+                    Toast.makeText(context, failedToSaveFile, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    })
+
+    val saveFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree(), onResult = { treeUri: Uri? ->
+        treeUri?.let {
+            try {
+                cleanedFiles.zip(originalFileNames).forEach { (cleanedFile, originalName) ->
+                    val dotIndex = originalName.lastIndexOf('.')
+                    val newFileName = if (dotIndex != -1) {
+                        originalName.substring(0, dotIndex) + "_cleaned" + originalName.substring(dotIndex)
+                    } else {
+                        originalName + "_cleaned"
+                    }
+
+                    // Using DocumentsContract to create file
+                    val newFileUri = DocumentsContract.createDocument(context.contentResolver, it, "image/jpeg", newFileName)
+                    newFileUri?.let { docUri ->
+                        context.contentResolver.openOutputStream(docUri)?.use { outputStream ->
+                            cleanedFile.inputStream().use { inputStream ->
                                 inputStream.copyTo(outputStream)
                             }
                         }
-                        Toast.makeText(context, imageSavedSuccessfully, Toast.LENGTH_SHORT)
-                            .show()
-                    } catch (e: IOException) {
-                        Log.e("TAG", "Failed to save file", e)
-                        Toast.makeText(context, failedToSaveFile, Toast.LENGTH_SHORT).show()
                     }
                 }
+                Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("TAG", "Failed to save files", e)
+                Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
             }
         }
-    )
+    })
 
-    val saveFilesLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
-        onResult = { treeUri: Uri? ->
-            treeUri?.let {
-                try {
-                    cleanedFiles.zip(originalFileNames).forEach { (cleanedFile, originalName) ->
-                        val dotIndex = originalName.lastIndexOf('.')
-                        val newFileName = if (dotIndex != -1) {
-                            originalName.substring(0, dotIndex) + "_cleaned" + originalName.substring(dotIndex)
-                        } else {
-                            originalName + "_cleaned"
-                        }
-
-                        // Using DocumentsContract to create file
-                        val newFileUri =
-                            DocumentsContract.createDocument(context.contentResolver, it, "image/jpeg", newFileName)
-                        newFileUri?.let { docUri ->
-                            context.contentResolver.openOutputStream(docUri)?.use { outputStream ->
-                                cleanedFile.inputStream().use { inputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
-                            }
-                        }
-                    }
-                    Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Log.e("TAG", "Failed to save files", e)
-                    Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         FilledTonalButton(onClick = { openImagesLauncher.launch(arrayOf("image/*")) }) {
             Text(text = stringResource(id = R.string.select_images))
         }
@@ -211,11 +189,7 @@ fun ActionButtons(
                     }
                 }) {
                     val buttonText = if (selectedImageUris.size > 1) {
-                        pluralStringResource(
-                            id = R.plurals.remove_exif_from_images,
-                            count = selectedImageUris.size,
-                            selectedImageUris.size
-                        )
+                        pluralStringResource(id = R.plurals.remove_exif_from_images, count = selectedImageUris.size, selectedImageUris.size)
                     } else {
                         stringResource(id = R.string.remove_exif_data)
                     }

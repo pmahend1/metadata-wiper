@@ -43,19 +43,14 @@ fun ImageMetadataDialog(uri: Uri, onDismissRequest: () -> Unit) {
 
     ModalBottomSheet(onDismissRequest = { onDismissRequest() }) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-            Text(
-                getFileName(LocalContext.current, uri) ?: "",
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleSmall,
-                textAlign = TextAlign.Center
-            )
+            Text(getFileName(LocalContext.current, uri) ?: "",
+                 modifier = Modifier.fillMaxWidth(),
+                 style = MaterialTheme.typography.titleSmall,
+                 textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
-            MetadataTable(
-                metadata = displayHashMap,
-                modifier = Modifier
+            MetadataTable(metadata = displayHashMap, modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-            )
+                    .padding(horizontal = 12.dp))
         }
     }
 }
