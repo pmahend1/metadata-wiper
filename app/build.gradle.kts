@@ -15,7 +15,7 @@ android {
         applicationId = "com.prateekmahendrakar.metadatawiper"
         minSdk = 26
         targetSdk = 36
-        versionCode = 110
+        versionCode = 120
         versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
