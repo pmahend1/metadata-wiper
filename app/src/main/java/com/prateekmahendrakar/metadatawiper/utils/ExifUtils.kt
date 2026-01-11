@@ -47,13 +47,25 @@ fun getRemovableExifTags(): Array<String> {
 fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
     val value = exif.getAttribute(tag)
     Log.d("EXIF", "TAG: $tag, VALUE: $value")
+    if (value == null) {
+        return ""
+    }
     val textOutput = when (tag) {
         ExifInterface.TAG_IMAGE_LENGTH,
         ExifInterface.TAG_IMAGE_WIDTH,
         ExifInterface.TAG_PIXEL_X_DIMENSION,
-        ExifInterface.TAG_PIXEL_Y_DIMENSION -> "${value}px"
+        ExifInterface.TAG_PIXEL_Y_DIMENSION -> when (val length = value.toIntOrNull()) {
+            null -> ""
+            else -> "${length}px"
+        }
 
-        ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_THUMBNAIL_ORIENTATION -> when (value?.toIntOrNull()) {
+        ExifInterface.TAG_X_RESOLUTION, ExifInterface.TAG_Y_RESOLUTION -> {
+            val resolution = exif.getAttributeDouble(tag, 72.0)
+            resolution.formatted()
+        }
+
+
+        ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_THUMBNAIL_ORIENTATION -> when (value.toIntOrNull()) {
             ExifInterface.ORIENTATION_NORMAL -> "Normal"
             ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> "Mirror Horizontal"
             ExifInterface.ORIENTATION_ROTATE_180 -> "Rotate 180"
@@ -62,16 +74,17 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.ORIENTATION_ROTATE_90 -> "Rotate 90 Clockwise"
             ExifInterface.ORIENTATION_TRANSVERSE -> "Mirror horizontal and rotate 90 Clockwise"
             ExifInterface.ORIENTATION_ROTATE_270 -> "Rotate 270 Clockwise"
-            else -> "Undefined"
+            ExifInterface.ORIENTATION_UNDEFINED -> "Undefined"
+            else -> ""
         }
 
-        ExifInterface.TAG_RESOLUTION_UNIT -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_RESOLUTION_UNIT -> when (value.toShortOrNull()) {
             ExifInterface.RESOLUTION_UNIT_INCHES -> "Inches"
             ExifInterface.RESOLUTION_UNIT_CENTIMETERS -> "Centimeters"
-            else -> "Undefined"
+            else -> ""
         }
 
-        ExifInterface.TAG_FLASH -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_FLASH -> when (value.toShortOrNull()) {
             ExifInterface.FLAG_FLASH_FIRED -> "Fired"
             ExifInterface.FLAG_FLASH_RETURN_LIGHT_NOT_DETECTED -> "Fired, return light not detected"
             ExifInterface.FLAG_FLASH_RETURN_LIGHT_DETECTED -> "Fired, return light detected"
@@ -80,10 +93,10 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.FLAG_FLASH_MODE_AUTO -> "Auto"
             ExifInterface.FLAG_FLASH_NO_FLASH_FUNCTION -> "No flash function"
             ExifInterface.FLAG_FLASH_RED_EYE_SUPPORTED -> "Red eye reduction"
-            else -> "Unknown"
+            else -> ""
         }
 
-        ExifInterface.TAG_LIGHT_SOURCE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_LIGHT_SOURCE -> when (value.toShortOrNull()) {
             ExifInterface.LIGHT_SOURCE_DAYLIGHT -> "Daylight"
             ExifInterface.LIGHT_SOURCE_FLUORESCENT -> "Fluorescent"
             ExifInterface.LIGHT_SOURCE_TUNGSTEN -> "Tungsten"
@@ -106,16 +119,16 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.LIGHT_SOURCE_ISO_STUDIO_TUNGSTEN -> "ISO Studio Tungsten"
             ExifInterface.LIGHT_SOURCE_OTHER -> "Other"
             ExifInterface.LIGHT_SOURCE_UNKNOWN -> "Unknown"
-            else -> "Unknown"
+            else -> ""
         }
 
-        ExifInterface.TAG_COLOR_SPACE -> when (value?.toIntOrNull()) {
+        ExifInterface.TAG_COLOR_SPACE -> when (value.toIntOrNull()) {
             ExifInterface.COLOR_SPACE_S_RGB -> "sRGB"
             ExifInterface.COLOR_SPACE_UNCALIBRATED -> "Uncalibrated"
             else -> ""
         }
 
-        ExifInterface.TAG_METERING_MODE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_METERING_MODE -> when (value.toShortOrNull()) {
             ExifInterface.METERING_MODE_AVERAGE -> "Average"
             ExifInterface.METERING_MODE_CENTER_WEIGHT_AVERAGE -> "Center-weighted average"
             ExifInterface.METERING_MODE_SPOT -> "Spot"
@@ -124,10 +137,10 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.METERING_MODE_PARTIAL -> "Partial"
             ExifInterface.METERING_MODE_OTHER -> "Other"
             ExifInterface.METERING_MODE_UNKNOWN -> "Unknown"
-            else -> "Unknown"
+            else -> ""
         }
 
-        ExifInterface.TAG_COMPRESSION -> when (value?.toIntOrNull()) {
+        ExifInterface.TAG_COMPRESSION -> when (value.toIntOrNull()) {
             ExifInterface.DATA_UNCOMPRESSED -> "Uncompressed"
             ExifInterface.DATA_HUFFMAN_COMPRESSED -> "Huffman compressed"
             ExifInterface.DATA_JPEG -> "JPEG"
@@ -135,21 +148,15 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.DATA_DEFLATE_ZIP -> "Deflate (ZIP)"
             ExifInterface.DATA_PACK_BITS_COMPRESSED -> "PackBits compressed"
             ExifInterface.DATA_LOSSY_JPEG -> "Lossy JPEG"
-            else -> "Unknown"
+            else -> ""
         }
 
-        ExifInterface.TAG_BRIGHTNESS_VALUE -> when (val brightness = exif.getAttributeDouble(tag, 0.0)) {
-            0.0 -> "Unknown"
-            else -> brightness.formatted()
+        ExifInterface.TAG_BRIGHTNESS_VALUE -> {
+            val brightnessValue = exif.getAttributeDouble(tag, 0.0)
+            brightnessValue.formatted()
         }
 
-        ExifInterface.TAG_Y_RESOLUTION,
-        ExifInterface.TAG_X_RESOLUTION -> {
-            val resolution = exif.getAttributeDouble(tag, 72.0)
-            resolution.formatted()
-        }
-
-        ExifInterface.TAG_SENSING_METHOD -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SENSING_METHOD -> when (value.toShortOrNull()) {
             ExifInterface.SENSOR_TYPE_ONE_CHIP -> "One-chip color area sensor"
             ExifInterface.SENSOR_TYPE_TWO_CHIP -> "Two-chip color area sensor"
             ExifInterface.SENSOR_TYPE_THREE_CHIP -> "Three-chip color area sensor"
@@ -157,16 +164,16 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             ExifInterface.SENSOR_TYPE_TRILINEAR -> "Trilinear sensor"
             ExifInterface.SENSOR_TYPE_COLOR_SEQUENTIAL_LINEAR -> "Color sequential linear sensor"
             ExifInterface.SENSOR_TYPE_NOT_DEFINED -> "Not defined"
-            else -> "Not defined"
+            else -> ""
         }
 
-        ExifInterface.TAG_WHITE_BALANCE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_WHITE_BALANCE -> when (value.toShortOrNull()) {
             ExifInterface.WHITE_BALANCE_AUTO -> "Auto"
             ExifInterface.WHITE_BALANCE_MANUAL -> "Manual"
             else -> "Unknown"
         }
 
-        ExifInterface.TAG_CONTRAST -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_CONTRAST -> when (value.toShortOrNull()) {
             ExifInterface.CONTRAST_SOFT -> "Soft"
             ExifInterface.CONTRAST_HARD -> "Hard"
             ExifInterface.CONTRAST_NORMAL -> "Normal"
@@ -195,28 +202,33 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
         }
 
         ExifInterface.TAG_DIGITAL_ZOOM_RATIO -> when (val doubleValue = exif.getAttributeDouble(tag, 0.0)) {
+            0.toDouble() -> ""
             doubleValue -> doubleValue.formatted()
             else -> "Unknown"
         }
 
-        ExifInterface.TAG_SCENE_TYPE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SCENE_TYPE -> when (value.toShortOrNull()) {
             ExifInterface.SCENE_TYPE_DIRECTLY_PHOTOGRAPHED -> "Directly Photographed"
             else -> "Unknown"
         }
 
-        ExifInterface.TAG_EXPOSURE_MODE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_EXPOSURE_MODE -> when (value.toShortOrNull()) {
             ExifInterface.EXPOSURE_MODE_AUTO -> "Auto"
             ExifInterface.EXPOSURE_MODE_MANUAL -> "Manual"
             ExifInterface.EXPOSURE_MODE_AUTO_BRACKET -> "Auto Bracket"
             else -> ""
         }
 
-        ExifInterface.TAG_EXPOSURE_TIME, ExifInterface.TAG_SUBSEC_TIME_ORIGINAL, ExifInterface.TAG_SUBSEC_TIME_DIGITIZED -> {
+        ExifInterface.TAG_EXPOSURE_TIME -> {
             val exposureTime = exif.getAttributeDouble(tag, 0.0) * 1000
             "${exposureTime.formatted()} milliseconds"
         }
 
-        ExifInterface.TAG_EXPOSURE_PROGRAM -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SUBSEC_TIME,
+        ExifInterface.TAG_SUBSEC_TIME_ORIGINAL,
+        ExifInterface.TAG_SUBSEC_TIME_DIGITIZED -> ".$value"
+
+        ExifInterface.TAG_EXPOSURE_PROGRAM -> when (value.toShortOrNull()) {
             ExifInterface.EXPOSURE_PROGRAM_MANUAL -> "Manual"
             ExifInterface.EXPOSURE_PROGRAM_NORMAL -> "Normal"
             ExifInterface.EXPOSURE_PROGRAM_APERTURE_PRIORITY -> "Aperture priority"
@@ -229,7 +241,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             else -> "Not defined"
         }
 
-        ExifInterface.TAG_SCENE_CAPTURE_TYPE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SCENE_CAPTURE_TYPE -> when (value.toShortOrNull()) {
             ExifInterface.SCENE_CAPTURE_TYPE_LANDSCAPE -> "Landscape"
             ExifInterface.SCENE_CAPTURE_TYPE_PORTRAIT -> "Portrait"
             ExifInterface.SCENE_CAPTURE_TYPE_NIGHT -> "Night scene"
@@ -242,7 +254,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             gpsImageDirection.formatted()
         }
 
-        ExifInterface.TAG_SHARPNESS -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SHARPNESS -> when (value.toShortOrNull()) {
             ExifInterface.SHARPNESS_SOFT -> "Soft"
             ExifInterface.SHARPNESS_HARD -> "Hard"
             else -> "Normal"
@@ -253,13 +265,13 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             else -> "True direction"
         }
 
-        ExifInterface.TAG_Y_CB_CR_POSITIONING -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_Y_CB_CR_POSITIONING -> when (value.toShortOrNull()) {
             ExifInterface.Y_CB_CR_POSITIONING_CO_SITED -> "Co-sited"
             ExifInterface.Y_CB_CR_POSITIONING_CENTERED -> "Centered"
             else -> "Centered"
         }
 
-        ExifInterface.TAG_SUBJECT_DISTANCE_RANGE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SUBJECT_DISTANCE_RANGE -> when (value.toShortOrNull()) {
             ExifInterface.SUBJECT_DISTANCE_RANGE_MACRO -> "Macro"
             ExifInterface.SUBJECT_DISTANCE_RANGE_CLOSE_VIEW -> "Close view"
             ExifInterface.SUBJECT_DISTANCE_RANGE_DISTANT_VIEW -> "Distant view"
@@ -267,7 +279,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             else -> ""
         }
 
-        ExifInterface.TAG_SENSITIVITY_TYPE -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SENSITIVITY_TYPE -> when (value.toShortOrNull()) {
             ExifInterface.SENSITIVITY_TYPE_SOS -> "Standard Output Sensitivity (SOS)"
             ExifInterface.SENSITIVITY_TYPE_REI -> "Recommended Exposure Index (REI)"
             ExifInterface.SENSITIVITY_TYPE_ISO_SPEED -> "ISO Speed"
@@ -279,7 +291,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             else -> "Unknown"
         }
 
-        ExifInterface.TAG_CUSTOM_RENDERED -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_CUSTOM_RENDERED -> when (value.toShortOrNull()) {
             ExifInterface.RENDERED_PROCESS_CUSTOM -> "Custom"
             ExifInterface.RENDERED_PROCESS_NORMAL -> "Normal"
             else -> "Unknown"
@@ -292,7 +304,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             else -> ""
         }
 
-        ExifInterface.TAG_SATURATION -> when (value?.toShortOrNull()) {
+        ExifInterface.TAG_SATURATION -> when (value.toShortOrNull()) {
             ExifInterface.SATURATION_LOW -> "Low"
             ExifInterface.SATURATION_HIGH -> "High"
             ExifInterface.SATURATION_NORMAL -> "Normal"
@@ -301,7 +313,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
 
         ExifInterface.TAG_XMP -> ""
 
-        ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM -> when (val fValue = value?.toShortOrNull()) {
+        ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM -> when (val fValue = value.toShort()) {
             0.toShort() -> "Unknown"
             fValue -> "${fValue}mm"
             else -> ""
@@ -338,9 +350,7 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
 
         }
 
-        else -> {
-            value ?: ""
-        }
+        else -> value
     }
     return textOutput
 }

@@ -3,6 +3,7 @@ package com.prateekmahendrakar.metadatawiper.ui
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.model.Theme
+import com.prateekmahendrakar.metadatawiper.viewmodel.SettingsViewModel
+import kotlin.getValue
 
 @Composable
 fun SettingsDialog(
@@ -74,7 +77,9 @@ fun SettingsDialog(
                                 .fillMaxWidth()
                                 .selectable(
                                     selected = (theme == tempTheme),
-                                    onClick = { tempTheme = theme }
+                                    onClick = { tempTheme = theme
+                                        onThemeChange(tempTheme)
+                                    }
                                 )
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -213,7 +218,6 @@ fun SettingsDialog(
                 // --- Close Button ---
                 Button(
                     onClick = {
-                        onThemeChange(tempTheme)
                         onOverwriteOriginalChange(tempOverwrite)
                         onDismiss()
                     },

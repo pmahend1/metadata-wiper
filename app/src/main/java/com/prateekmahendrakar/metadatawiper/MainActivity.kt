@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -50,6 +53,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.model.Theme
 import com.prateekmahendrakar.metadatawiper.ui.ActionButtons
+import com.prateekmahendrakar.metadatawiper.ui.ImageMetadataDialog
 import com.prateekmahendrakar.metadatawiper.ui.MetadataTable
 import com.prateekmahendrakar.metadatawiper.ui.SettingsDialog
 import com.prateekmahendrakar.metadatawiper.ui.theme.MetaDataWiperTheme
@@ -155,9 +159,10 @@ class MainActivity : ComponentActivity() {
                                     painter = rememberAsyncImagePainter(selectedImageUris.first()),
                                     contentDescription = stringResource(id = R.string.selected_image),
                                     modifier = Modifier
-                                        .defaultMinSize(minWidth = 200.dp, minHeight = 200.dp)
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
+                                        .defaultMinSize(minWidth = 250.dp, minHeight = 250.dp)
+                                        .padding(horizontal = 8.dp),
+                                    contentScale = ContentScale.Fit
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
@@ -165,7 +170,10 @@ class MainActivity : ComponentActivity() {
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
-                                MetadataTable(metadata = metadataMap)
+                                MetadataTable(
+                                    metadata = metadataMap,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
                             }
                         } else if (selectedImageUris.size > 1) {
                             LazyVerticalGrid(
@@ -177,12 +185,23 @@ class MainActivity : ComponentActivity() {
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 items(selectedImageUris) { uri ->
-                                    Image(
-                                        painter = rememberAsyncImagePainter(uri),
-                                        contentDescription = stringResource(id = R.string.selected_image),
-                                        modifier = Modifier.aspectRatio(1f),
-                                        contentScale = ContentScale.Crop
-                                    )
+                                    var isImageMetadataModalVisible by remember { mutableStateOf(false) }
+                                    Button(
+                                        onClick = { isImageMetadataModalVisible = !isImageMetadataModalVisible },
+                                        colors = ButtonDefaults.buttonColors(Color.Transparent)
+                                    ) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(uri),
+                                            contentDescription = stringResource(id = R.string.selected_image),
+                                            modifier = Modifier.aspectRatio(1f),
+                                            contentScale = ContentScale.Fit,
+                                        )
+                                        if (isImageMetadataModalVisible) {
+                                            ImageMetadataDialog(uri) {
+                                                isImageMetadataModalVisible = false
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         } else {
