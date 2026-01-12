@@ -30,12 +30,16 @@ fun MetadataTable(metadata: Map<String, String>, modifier: Modifier = Modifier) 
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)) {
-                Text(stringResource(id = R.string.tag), modifier = modifier
-                        .weight(1f)
-                        .padding(start = 6.dp), fontWeight = FontWeight.Bold)
+                Text(stringResource(id = R.string.tag),
+                     modifier = modifier
+                             .weight(1f)
+                             .padding(start = 6.dp),
+                     fontWeight = FontWeight.Bold,
+                     color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text(stringResource(id = R.string.value_with_count, filteredEntries.size),
                      modifier = modifier.weight(1f),
-                     fontWeight = FontWeight.Bold)
+                     fontWeight = FontWeight.Bold,
+                     color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             filteredEntries.forEachIndexed { index, (key, value) ->
                 Row(modifier = modifier

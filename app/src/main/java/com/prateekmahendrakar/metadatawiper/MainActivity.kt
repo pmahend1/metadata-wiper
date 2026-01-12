@@ -110,9 +110,10 @@ class MainActivity : ComponentActivity() {
                                                                          titleContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                          actionIconContentColor = MaterialTheme.colorScheme.onPrimary))
                 }) { padding ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
-                            .padding(padding)
-                            .fillMaxSize()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                           modifier = Modifier
+                                   .padding(padding)
+                                   .fillMaxSize()) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // --- Action Buttons ---
