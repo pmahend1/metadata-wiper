@@ -57,7 +57,6 @@ import com.prateekmahendrakar.metadatawiper.ui.SettingsDialog
 import com.prateekmahendrakar.metadatawiper.ui.theme.MetaDataWiperTheme
 import com.prateekmahendrakar.metadatawiper.utils.getFileName
 import com.prateekmahendrakar.metadatawiper.viewmodel.SettingsViewModel
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -81,8 +80,6 @@ class MainActivity : ComponentActivity() {
                 var metadataMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
                 var hasRemovableExifData by remember { mutableStateOf(false) }
                 var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-                var cleanedFiles by remember { mutableStateOf<List<File>>(emptyList()) }
-                var originalFileNames by remember { mutableStateOf<List<String>>(emptyList()) }
                 var showSettingsDialog by remember { mutableStateOf(false) }
 
                 val packageInfo: PackageInfo = packageManager.getPackageInfo(packageName, 0)
@@ -99,9 +96,7 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(topBar = {
                     TopAppBar(title = {
-                        Text(text = stringResource(id = R.string.app_name),
-                             modifier = Modifier.fillMaxWidth(),
-                             textAlign = TextAlign.Center)
+                        Text(text = stringResource(id = R.string.app_name), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                     },
                               actions = {
                                   SettingsButton(onClick = { showSettingsDialog = true })
@@ -110,23 +105,18 @@ class MainActivity : ComponentActivity() {
                                                                          titleContentColor = MaterialTheme.colorScheme.onPrimary,
                                                                          actionIconContentColor = MaterialTheme.colorScheme.onPrimary))
                 }) { padding ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
-                           modifier = Modifier
-                                   .padding(padding)
-                                   .fillMaxSize()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize()) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // --- Action Buttons ---
-                        ActionButtons(cleanedFiles = cleanedFiles,
-                                      hasRemovableExif = hasRemovableExifData,
+                        ActionButtons(hasRemovableExif = hasRemovableExifData,
                                       isEnabled = selectedImageUris.isNotEmpty(),
-                                      originalFileNames = originalFileNames,
-                                      onImagesSelected = { uris, metadata, files, hasRemovable, names ->
+                                      onImagesSelected = { uris, metadata, hasRemovable ->
                                           selectedImageUris = uris
-                                          cleanedFiles = files
                                           metadataMap = metadata
                                           hasRemovableExifData = hasRemovable
-                                          originalFileNames = names
                                       },
                                       overwriteOriginal = overwriteOriginal,
                                       selectedImageUris = selectedImageUris)
@@ -135,27 +125,24 @@ class MainActivity : ComponentActivity() {
 
                         // --- Content Area ---
                         if (selectedImageUris.size == 1) {
-                            Column(modifier = Modifier.verticalScroll(rememberScrollState()),
-                                   horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Image(painter = rememberAsyncImagePainter(selectedImageUris.first()),
                                       contentDescription = stringResource(id = R.string.selected_image),
                                       modifier = Modifier
-                                              .fillMaxWidth()
-                                              .defaultMinSize(minWidth = 250.dp, minHeight = 250.dp)
-                                              .padding(horizontal = 8.dp),
+                                          .fillMaxWidth()
+                                          .defaultMinSize(minWidth = 250.dp, minHeight = 250.dp)
+                                          .padding(horizontal = 8.dp),
                                       contentScale = ContentScale.Fit)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text(getFileName(LocalContext.current, selectedImageUris.first()) ?: "",
-                                     style = MaterialTheme.typography.titleMedium)
+                                Text(getFileName(LocalContext.current, selectedImageUris.first()) ?: "", style = MaterialTheme.typography.titleMedium)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                MetadataTable(metadata = metadataMap,
-                                              modifier = Modifier.padding(horizontal = 8.dp))
+                                MetadataTable(metadata = metadataMap, modifier = Modifier.padding(horizontal = 8.dp))
                             }
                         } else if (selectedImageUris.size > 1) {
                             LazyVerticalGrid(columns = GridCells.Fixed(3),
                                              modifier = Modifier
-                                                     .fillMaxSize()
-                                                     .padding(horizontal = 4.dp),
+                                                 .fillMaxSize()
+                                                 .padding(horizontal = 4.dp),
                                              horizontalArrangement = Arrangement.spacedBy(4.dp),
                                              verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 items(selectedImageUris) { uri ->
@@ -165,10 +152,10 @@ class MainActivity : ComponentActivity() {
                                           contentDescription = stringResource(id = R.string.selected_image),
                                           contentScale = ContentScale.Fit,
                                           modifier = Modifier
-                                                  .aspectRatio(1f)
-                                                  .clickable {
-                                                      isImageMetadataModalVisible = !isImageMetadataModalVisible
-                                                  })
+                                              .aspectRatio(1f)
+                                              .clickable {
+                                                  isImageMetadataModalVisible = !isImageMetadataModalVisible
+                                              })
                                     if (isImageMetadataModalVisible) {
                                         ImageMetadataDialog(uri) {
                                             isImageMetadataModalVisible = false
@@ -200,7 +187,6 @@ fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
@@ -208,9 +194,7 @@ fun MainScreenPreview() {
     MetaDataWiperTheme {
         Scaffold(topBar = {
             TopAppBar(title = {
-                Text(text = stringResource(id = R.string.app_name),
-                     modifier = Modifier.fillMaxWidth(),
-                     textAlign = TextAlign.Center)
+                Text(text = stringResource(id = R.string.app_name), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             },
                       actions = {
                           SettingsButton(onClick = { })
@@ -221,16 +205,14 @@ fun MainScreenPreview() {
         }) { padding ->
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                    modifier = Modifier
-                           .padding(padding)
-                           .fillMaxSize()
-                           .verticalScroll(rememberScrollState())) {
+                       .padding(padding)
+                       .fillMaxSize()
+                       .verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                ActionButtons(cleanedFiles = emptyList(),
-                              hasRemovableExif = false,
+                ActionButtons(hasRemovableExif = false,
                               isEnabled = false,
-                              originalFileNames = emptyList(),
-                              onImagesSelected = { _, _, _, _, _ -> },
+                              onImagesSelected = { _, _, _ -> },
                               overwriteOriginal = false,
                               selectedImageUris = emptyList())
 

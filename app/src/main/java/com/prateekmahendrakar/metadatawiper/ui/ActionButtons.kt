@@ -32,13 +32,11 @@ import java.io.IOException
 import kotlin.io.path.createTempFile
 
 @Composable
-fun ActionButtons(cleanedFiles: List<File>,
+fun ActionButtons(selectedImageUris: List<Uri>,
                   hasRemovableExif: Boolean,
                   isEnabled: Boolean,
-                  originalFileNames: List<String>,
-                  onImagesSelected: (List<Uri>, HashMap<String, String>, List<File>, Boolean, List<String>) -> Unit,
-                  overwriteOriginal: Boolean,
-                  selectedImageUris: List<Uri>) {
+                  onImagesSelected: (List<Uri>, HashMap<String, String>, Boolean) -> Unit,
+                  overwriteOriginal: Boolean) {
     val context = LocalContext.current
     val errorProcessingFiles = stringResource(id = R.string.error_processing_files)
     val imageSavedSuccessfully = stringResource(id = R.string.image_saved_successfully)
@@ -47,77 +45,74 @@ fun ActionButtons(cleanedFiles: List<File>,
     val failedToSaveImages = stringResource(id = R.string.failed_to_save_images)
 
     val openImagesLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(),
-            onResult = { uris: List<Uri> ->
-                if (uris.isNotEmpty()) {
-                    try {
-                        val allCleanedFiles = mutableListOf<File>()
-                        val allOriginalFileNames = mutableListOf<String>()
-                        val displayHashMap = HashMap<String, String>()
-                        var hasAnyRemovableData = false
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(), onResult = { uris: List<Uri> ->
+            if (uris.isNotEmpty()) {
+                try {
+                    val displayHashMap = HashMap<String, String>()
+                    var hasAnyRemovableData = false
 
-                        uris.forEach { uri ->
-                            val originalTempFile = createTempFile().toFile()
-                            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                                originalTempFile.outputStream().use { outputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
+                    uris.forEach { uri ->
+                        val originalTempFile = createTempFile().toFile()
+                        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                            originalTempFile.outputStream().use { outputStream ->
+                                inputStream.copyTo(outputStream)
                             }
+                        }
+                        val exifReader = ExifInterface(originalTempFile.absolutePath)
 
-                            val exifReader = ExifInterface(originalTempFile.absolutePath)
-                            val removableTags = getRemovableExifTags()
-                            val hasRemovableData = removableTags.any { tag -> exifReader.getAttribute(tag) != null }
-                            if (hasRemovableData) {
-                                hasAnyRemovableData = true
-                            }
+                        val hasRemovableData = getRemovableExifTags().any { tag ->
+                            exifReader.getAttribute(tag) != null
+                        }
+                        if (hasRemovableData) {
+                            hasAnyRemovableData = true
+                        }
 
-                            val cleanedTempFile = createTempFile().toFile()
-                            originalTempFile.copyTo(cleanedTempFile, overwrite = true)
-
-                            if (hasRemovableData) {
-                                val exifWriter = ExifInterface(cleanedTempFile.absolutePath)
-                                for (tag in removableTags) {
-                                    exifWriter.setAttribute(tag, null)
-                                }
-                                exifWriter.saveAttributes()
-                            }
-
-                            allCleanedFiles.add(cleanedTempFile)
-                            val fileName = getFileName(context, uri) ?: "cleaned_file.jpg"
-                            allOriginalFileNames.add(fileName)
-
-                            // For single image selection, populate metadata for display
-                            if (uris.size == 1) {
-                                val allTags = getAllExifTags()
-                                for (tag in allTags) {
-                                    val stringValue = getFormattedExifValue(exifReader, tag)
-                                    displayHashMap[tag] = stringValue
-                                }
+                        // For single image selection, populate metadata for display
+                        if (uris.size == 1) {
+                            val allTags = getAllExifTags()
+                            for (tag in allTags) {
+                                val stringValue = getFormattedExifValue(exifReader, tag)
+                                displayHashMap[tag] = stringValue
                             }
                         }
 
-                        onImagesSelected(uris,
-                            displayHashMap,
-                            allCleanedFiles,
-                            hasAnyRemovableData,
-                            allOriginalFileNames)
-
-                    } catch (e: IOException) {
-                        Log.e("TAG", "Error processing files", e)
-                        Toast.makeText(context, errorProcessingFiles, Toast.LENGTH_SHORT).show()
                     }
-                }
-            })
 
+                    onImagesSelected(uris, displayHashMap, hasAnyRemovableData)
+
+                } catch (e: IOException) {
+                    Log.e("TAG", "Error processing files", e)
+                    Toast.makeText(context, errorProcessingFiles, Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
+
+    //Single
     val saveFileLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.CreateDocument("image/*"), onResult = { uri: Uri? ->
         uri?.let { saveUri ->
-            cleanedFiles.firstOrNull()?.let { file ->
+            selectedImageUris.firstOrNull()?.let { selectedImageUri ->
                 try {
-                    context.contentResolver.openOutputStream(saveUri)?.use { outputStream ->
-                        file.inputStream().use { inputStream ->
+                    val cleanedTempFile = createTempFile().toFile()
+                    context.contentResolver.openInputStream(selectedImageUri)?.use { inputStream ->
+                        cleanedTempFile.outputStream().use { outputStream ->
                             inputStream.copyTo(outputStream)
                         }
                     }
+                    if (hasRemovableExif) {
+                        val exifWriter = ExifInterface(cleanedTempFile.absolutePath)
+                        for (tag in getRemovableExifTags()) {
+                            exifWriter.setAttribute(tag, null)
+                        }
+                        exifWriter.saveAttributes()
+                    }
+
+                    context.contentResolver.openOutputStream(saveUri)?.use { outputStream ->
+                        cleanedTempFile.inputStream().use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+
+
                     Toast.makeText(context, imageSavedSuccessfully, Toast.LENGTH_SHORT).show()
                 } catch (e: IOException) {
                     Log.e("TAG", "Failed to save file", e)
@@ -127,39 +122,64 @@ fun ActionButtons(cleanedFiles: List<File>,
         }
     })
 
-    val saveFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree(),
-        onResult = { treeUri: Uri? ->
-            treeUri?.let {
-                try {
-                    cleanedFiles.zip(originalFileNames).forEach { (cleanedFile, originalName) ->
-                        val dotIndex = originalName.lastIndexOf('.')
-                        val newFileName = if (dotIndex != -1) {
-                            originalName.substring(0, dotIndex) + "_cleaned" + originalName.substring(dotIndex)
-                        } else {
-                            originalName + "_cleaned"
-                        }
+    //Multiple
+    val saveFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree(), onResult = { treeUri: Uri? ->
+        treeUri?.let { safeAccessFolderUri ->
+            try {
+                val allCleanedFiles: MutableList<File> = mutableListOf()
+                val allOriginalFileNames: MutableList<String> = mutableListOf()
 
-                        // Using DocumentsContract to create file
-                        val newFileUri = DocumentsContract.createDocument(context.contentResolver, it, "image/jpeg", newFileName)
-                        newFileUri?.let { docUri ->
-                            context.contentResolver.openOutputStream(docUri)?.use { outputStream ->
-                                cleanedFile.inputStream().use { inputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
+                selectedImageUris.forEach { selectedImageUri ->
+                    val cleanedTempFile = createTempFile().toFile()
+                    context.contentResolver.openInputStream(selectedImageUri)?.use { inputStream ->
+                        cleanedTempFile.outputStream().use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    if (hasRemovableExif) {
+                        val exifWriter = ExifInterface(cleanedTempFile.absolutePath)
+                        for (tag in getRemovableExifTags()) {
+                            exifWriter.setAttribute(tag, null)
+                        }
+                        exifWriter.saveAttributes()
+                    }
+                    allCleanedFiles.add(cleanedTempFile)
+                    val fileName = getFileName(context, selectedImageUri) ?: "cleaned_file.jpg"
+                    allOriginalFileNames.add(fileName)
+                }
+
+
+
+                allCleanedFiles.zip(allOriginalFileNames).forEach { (cleanedFile, originalName) ->
+                    val dotIndex = originalName.lastIndexOf('.')
+                    val newFileName = when {
+                        dotIndex != -1 -> originalName.substring(0, dotIndex) + "_cleaned" + originalName.substring(dotIndex)
+                        else -> originalName + "_cleaned"
+                    }
+                    // Using DocumentsContract to create file
+
+                    val docId = DocumentsContract.getTreeDocumentId(safeAccessFolderUri)
+                    val dirUri = DocumentsContract.buildDocumentUriUsingTree(safeAccessFolderUri, docId)
+                    val newFileUri = DocumentsContract.createDocument(context.contentResolver, dirUri, "image/jpeg", newFileName)
+                    newFileUri?.let { docUri ->
+                        context.contentResolver.openOutputStream(docUri)?.use { outputStream ->
+                            cleanedFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
                             }
                         }
                     }
-                    Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Log.e("TAG", "Failed to save files", e)
-                    Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
                 }
-            }
-        })
 
-    Column(modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
+
+                Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e("TAG", "Failed to save files", e)
+                Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
+            }
+        }
+    })
+
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         FilledTonalButton(onClick = { openImagesLauncher.launch(arrayOf("image/*")) }) {
             Text(text = stringResource(id = R.string.select_images))
         }
@@ -169,7 +189,28 @@ fun ActionButtons(cleanedFiles: List<File>,
                 Button(onClick = {
                     if (overwriteOriginal) {
                         try {
-                            selectedImageUris.zip(cleanedFiles).forEach { (uri, cleanedFile) ->
+                            val allCleanedFiles: MutableList<File> = mutableListOf()
+                            val allOriginalFileNames: MutableList<String> = mutableListOf()
+
+                            selectedImageUris.forEach { selectedImageUri ->
+                                val cleanedTempFile = createTempFile().toFile()
+                                context.contentResolver.openInputStream(selectedImageUri)?.use { inputStream ->
+                                    cleanedTempFile.outputStream().use { outputStream ->
+                                        inputStream.copyTo(outputStream)
+                                    }
+                                }
+                                if (hasRemovableExif) {
+                                    val exifWriter = ExifInterface(cleanedTempFile.absolutePath)
+                                    for (tag in getRemovableExifTags()) {
+                                        exifWriter.setAttribute(tag, null)
+                                    }
+                                    exifWriter.saveAttributes()
+                                }
+                                allCleanedFiles.add(cleanedTempFile)
+                                val fileName = getFileName(context, selectedImageUri) ?: "cleaned_file.jpg"
+                                allOriginalFileNames.add(fileName)
+                            }
+                            selectedImageUris.zip(allCleanedFiles).forEach { (uri, cleanedFile) ->
                                 context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
                                     cleanedFile.inputStream().use { inputStream ->
                                         inputStream.copyTo(outputStream)
@@ -181,21 +222,21 @@ fun ActionButtons(cleanedFiles: List<File>,
                             Log.e("TAG", "Failed to save files", e)
                             Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
                         }
-                    } else {
-                        if (selectedImageUris.size == 1) {
-                            val originalFileName = originalFileNames.first()
-                            val newFileName = originalFileName.let {
-                                val dotIndex = it.lastIndexOf('.')
-                                if (dotIndex != -1) {
-                                    it.substring(0, dotIndex) + "_cleaned" + it.substring(dotIndex)
-                                } else {
-                                    it + "_cleaned"
-                                }
+                    } else if (selectedImageUris.size == 1) {
+                        val originalName = getFileName(context, selectedImageUris.first())
+                        if (originalName != null) {
+
+                            val dotIndex = originalName.lastIndexOf('.')
+                            val newFileName = if (dotIndex != -1) {
+                                originalName.take(dotIndex) + "_cleaned" + originalName.substring(dotIndex)
+                            } else {
+                                originalName + "_cleaned"
                             }
                             saveFileLauncher.launch(newFileName)
-                        } else {
-                            saveFilesLauncher.launch(null)
+
                         }
+                    } else if (selectedImageUris.size > 1) {
+                        saveFilesLauncher.launch(null)
                     }
                 }) {
                     val buttonText = if (selectedImageUris.size > 1) {
