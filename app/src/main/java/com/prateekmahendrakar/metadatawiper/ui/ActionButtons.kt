@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -179,14 +180,15 @@ fun ActionButtons(selectedImageUris: List<Uri>,
         }
     })
 
+    ///UI
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        FilledTonalButton(onClick = { openImagesLauncher.launch(arrayOf("image/*")) }) {
-            Text(text = stringResource(id = R.string.select_images))
+        FilledTonalButton(shape = MaterialTheme.shapes.large, onClick = { openImagesLauncher.launch(arrayOf("image/*")) }) {
+            Text(text = stringResource(id = R.string.select_images), style = MaterialTheme.typography.titleLarge)
         }
         Spacer(modifier = Modifier.padding(8.dp))
         if (isEnabled) {
             if (hasRemovableExif) {
-                Button(onClick = {
+                Button(shape = MaterialTheme.shapes.large, onClick = {
                     if (overwriteOriginal) {
                         try {
                             val allCleanedFiles: MutableList<File> = mutableListOf()
@@ -244,7 +246,7 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                     } else {
                         stringResource(id = R.string.remove_exif_data)
                     }
-                    Text(text = buttonText)
+                    Text(text = buttonText, style = MaterialTheme.typography.titleLarge)
                 }
             } else {
                 Text(stringResource(id = R.string.no_removable_exif_data))

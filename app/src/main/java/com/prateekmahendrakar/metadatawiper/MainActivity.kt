@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
                         .padding(padding)
                         .fillMaxSize()) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         // --- Action Buttons ---
                         ActionButtons(hasRemovableExif = hasRemovableExifData,
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                                                  .fillMaxSize()
                                                  .padding(horizontal = 4.dp),
                                              horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 items(selectedImageUris) { uri ->
                                     var isImageMetadataModalVisible by remember { mutableStateOf(false) }
 
@@ -167,8 +167,8 @@ class MainActivity : ComponentActivity() {
                         } else {
                             Text(text = stringResource(id = R.string.select_images_prompt),
                                  style = MaterialTheme.typography.bodyLarge,
-                                 textAlign = TextAlign.Center,
-                                 modifier = Modifier.padding(16.dp))
+                                 textAlign = TextAlign.Justify,
+                                 modifier = Modifier.padding(horizontal = 16.dp))
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
