@@ -149,8 +149,6 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                     allOriginalFileNames.add(fileName)
                 }
 
-
-
                 allCleanedFiles.zip(allOriginalFileNames).forEach { (cleanedFile, originalName) ->
                     val dotIndex = originalName.lastIndexOf('.')
                     val newFileName = when {
@@ -219,7 +217,11 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                                     }
                                 }
                             }
-                            Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
+                            val toastText = when (selectedImageUris.size) {
+                                1 -> imageSavedSuccessfully
+                                else -> imagesSavedSuccessfully
+                            }
+                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                         } catch (e: IOException) {
                             Log.e("TAG", "Failed to save files", e)
                             Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
