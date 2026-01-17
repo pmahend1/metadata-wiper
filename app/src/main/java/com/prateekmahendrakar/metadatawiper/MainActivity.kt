@@ -121,7 +121,10 @@ class MainActivity : ComponentActivity() {
                                           hasRemovableExifData = hasRemovable
                                       },
                                       overwriteOriginal = overwriteOriginal,
-                                      selectedImageUris = selectedImageUris)
+                                      selectedImageUris = selectedImageUris,
+                                      onSuccess = {
+                                          selectedImageUris = emptyList()
+                                      })
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -216,7 +219,8 @@ fun MainScreenPreview() {
                               isEnabled = false,
                               onImagesSelected = { _, _, _ -> },
                               overwriteOriginal = false,
-                              selectedImageUris = emptyList())
+                              selectedImageUris = emptyList(),
+                              onSuccess = {})
 
                 Spacer(modifier = Modifier.height(16.dp))
 

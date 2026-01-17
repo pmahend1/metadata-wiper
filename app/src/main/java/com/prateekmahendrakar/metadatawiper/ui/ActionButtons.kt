@@ -37,11 +37,11 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                   hasRemovableExif: Boolean,
                   isEnabled: Boolean,
                   onImagesSelected: (List<Uri>, HashMap<String, String>, Boolean) -> Unit,
-                  overwriteOriginal: Boolean) {
+                  overwriteOriginal: Boolean,
+                  onSuccess: () -> Unit) {
     val context = LocalContext.current
     val errorProcessingFiles = stringResource(id = R.string.error_processing_files)
-    val imageSavedSuccessfully = stringResource(id = R.string.image_saved_successfully)
-    val imagesSavedSuccessfully = stringResource(id = R.string.images_saved_successfully)
+    val metadataWipeSuccess = stringResource(id = R.string.metadata_wiped_successfully)
     val failedToSaveFile = stringResource(id = R.string.failed_to_save_file)
     val failedToSaveImages = stringResource(id = R.string.failed_to_save_images)
 
@@ -113,8 +113,8 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                         }
                     }
 
-
-                    Toast.makeText(context, imageSavedSuccessfully, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, metadataWipeSuccess, Toast.LENGTH_SHORT).show()
+                    onSuccess()
                 } catch (e: IOException) {
                     Log.e("TAG", "Failed to save file", e)
                     Toast.makeText(context, failedToSaveFile, Toast.LENGTH_SHORT).show()
@@ -156,7 +156,6 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                         else -> originalName + "_cleaned"
                     }
                     // Using DocumentsContract to create file
-
                     val docId = DocumentsContract.getTreeDocumentId(safeAccessFolderUri)
                     val dirUri = DocumentsContract.buildDocumentUriUsingTree(safeAccessFolderUri, docId)
                     val newFileUri = DocumentsContract.createDocument(context.contentResolver, dirUri, "image/jpeg", newFileName)
@@ -168,9 +167,8 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                         }
                     }
                 }
-
-
-                Toast.makeText(context, imagesSavedSuccessfully, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, metadataWipeSuccess, Toast.LENGTH_SHORT).show()
+                onSuccess()
             } catch (e: Exception) {
                 Log.e("TAG", "Failed to save files", e)
                 Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
@@ -217,11 +215,8 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                                     }
                                 }
                             }
-                            val toastText = when (selectedImageUris.size) {
-                                1 -> imageSavedSuccessfully
-                                else -> imagesSavedSuccessfully
-                            }
-                            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, metadataWipeSuccess, Toast.LENGTH_SHORT).show()
+                            onSuccess()
                         } catch (e: IOException) {
                             Log.e("TAG", "Failed to save files", e)
                             Toast.makeText(context, failedToSaveImages, Toast.LENGTH_SHORT).show()
@@ -237,7 +232,6 @@ fun ActionButtons(selectedImageUris: List<Uri>,
                                 originalName + "_cleaned"
                             }
                             saveFileLauncher.launch(newFileName)
-
                         }
                     } else if (selectedImageUris.size > 1) {
                         saveFilesLauncher.launch(null)

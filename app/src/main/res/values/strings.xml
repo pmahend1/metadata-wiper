@@ -33,4 +33,5 @@
         <item quantity="other">Remove Exif from %d images</item>
     </plurals>
     <string name="value_with_count">Value(%d)</string>
+    <string name="metadata_wiped_successfully">Metadata wiped successfully!</string>
 </resources>
