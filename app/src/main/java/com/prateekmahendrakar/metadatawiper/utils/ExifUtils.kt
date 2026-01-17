@@ -12,11 +12,11 @@ fun Double.formatted(): String {
     }
 }
 
-
 fun getEssentialExifTags(): Set<String> {
     return setOf(ExifInterface.TAG_IMAGE_LENGTH,
                  ExifInterface.TAG_IMAGE_WIDTH,
                  ExifInterface.TAG_ORIENTATION,
+                 ExifInterface.TAG_LIGHT_SOURCE,
                  ExifInterface.TAG_PHOTOMETRIC_INTERPRETATION,
                  ExifInterface.TAG_SAMPLES_PER_PIXEL,
                  ExifInterface.TAG_BITS_PER_SAMPLE,
@@ -31,8 +31,9 @@ fun getEssentialExifTags(): Set<String> {
 
 fun getAllExifTags(): Array<String> {
     // This function remains to get ALL data for display purposes
-    return ExifInterface::class.java.fields.filter { it.name.startsWith("TAG_") && it.type == String::class.java }.map { it.get(null) as String }
-            .toTypedArray()
+    return ExifInterface::class.java.fields.filter { it.name.startsWith("TAG_") && it.type == String::class.java }
+        .map { it.get(null) as String }
+        .toTypedArray()
 }
 
 fun getRemovableExifTags(): Array<String> {
@@ -59,7 +60,6 @@ fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
             val resolution = exif.getAttributeDouble(tag, 72.0)
             resolution.formatted()
         }
-
 
         ExifInterface.TAG_ORIENTATION, ExifInterface.TAG_THUMBNAIL_ORIENTATION -> when (value.toIntOrNull()) {
             ExifInterface.ORIENTATION_NORMAL -> "Normal"
