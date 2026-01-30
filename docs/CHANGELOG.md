@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 29-Jan-2026
+
+- **Detailed Metadata View**: You can see exactly what information is attached to your photos, including file names and detailed EXIF counts.
+- **Redesigned UI**: Redesigned the button layout and added intuitive tap gestures to make navigating the app faster and easier.
+- **Improved Localization**: Improved Spanish translations and clearer prompts throughout the app for a better local experience.
+- **Technical Updates**: Updated to support the latest Android 15/16 features and improved overall file handling for faster, more reliable performance.
+
 ## [1.1.0] - 13-Dec-2025
 
 ### New
