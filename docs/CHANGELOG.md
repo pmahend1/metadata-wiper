@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 22-Mar-2026
+
+- Updated gradle and packages.
+- Switched from OpenJDK 17 to OpenJDK 25 for improved performance and security.
+- App uses minimization to reduce APK size.
+
 ## [1.3.2] - 29-Jan-2026
 
 - **Detailed Metadata View**: You can see exactly what information is attached to your photos, including file names and detailed EXIF counts.

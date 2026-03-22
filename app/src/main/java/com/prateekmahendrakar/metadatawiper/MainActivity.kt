@@ -1,5 +1,3 @@
-@file:Suppress("AssignedValueIsNeverRead")
-
 package com.prateekmahendrakar.metadatawiper
 
 import android.content.pm.PackageInfo
