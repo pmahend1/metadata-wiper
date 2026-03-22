@@ -2,9 +2,6 @@ name: Build Release Bundle
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - release-workflow
 
 jobs:
   release:
