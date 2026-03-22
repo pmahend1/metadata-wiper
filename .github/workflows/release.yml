@@ -25,16 +25,16 @@ jobs:
         shell: pwsh
         run: |
           $bytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
-          $path  = Join-Path $env:RUNNER_TEMP "${{ secrets.KEYSTORE_FILENAME }}"
+          $path  = Join-Path $env:RUNNER_TEMP "${{ vars.KEYSTORE_FILENAME }}"
           [IO.File]::WriteAllBytes($path, $bytes)
           Write-Host "Keystore written to $path"
 
       - name: Build Release App Bundle
         run: ./gradlew bundleRelease
         env:
-          KEYSTORE_PATH: ${{ runner.temp }}/${{ secrets.KEYSTORE_FILENAME }}
+          KEYSTORE_PATH: ${{ runner.temp }}/${{ vars.KEYSTORE_FILENAME }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_ALIAS: ${{ vars.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Rename and Prepare Artifacts
