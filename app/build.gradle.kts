@@ -1,9 +1,5 @@
-import com.android.build.gradle.internal.api.ApkVariantOutputImpl
-import org.gradle.kotlin.dsl.support.uppercaseFirstChar
-
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -27,28 +23,15 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    applicationVariants.configureEach {
-        // rename the output APK file
-        outputs.configureEach {
-            (this as? ApkVariantOutputImpl)?.outputFileName = "${rootProject.name}_${versionName}_${buildType.name}.apk"
-        }
-
-        // rename the output AAB file
-        tasks.named("sign${flavorName.uppercaseFirstChar()}${buildType.name.uppercaseFirstChar()}Bundle",
-                    com.android.build.gradle.internal.tasks.FinalizeBundleTask::class.java) {
-            val file = finalBundleFile.asFile.get()
-            val finalFile = File(file.parentFile, "${rootProject.name}_${versionName}_${buildType.name}.aab")
-            finalBundleFile.set(finalFile)
-        }
-    }
 
     buildFeatures {
         compose = true
     }
+    compileSdkMinor = 1
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(25)
 }
 
 dependencies {
