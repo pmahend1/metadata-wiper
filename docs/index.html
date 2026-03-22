@@ -68,7 +68,7 @@
                     j++;
                 }
                 const contentMd = collected.join('\n');
-                // parse inner markdown to HTML
+                // parse inner Markdown to HTML
                 const innerHtml = marked.parse(contentMd);
                 const calloutHtml = '\n<div class="callout note">'
                     + '<div class="callout-icon" aria-hidden="true">&#9432;</div>'
