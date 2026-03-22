@@ -22,7 +22,8 @@
     <string name="app_version">Versión de la App</string>
     <plurals name="remove_exif_from_images">
         <item quantity="one">Eliminar Exif de %d imagen</item>
-        <item quantity="many">Eliminar Exif de %d imágenes</item>
+        <item quantity="other">Eliminar Exif de %d imágenes</item>
+        <item quantity="many">%d images selected</item>
     </plurals>
     <string name="value_with_count">Valor(%d)</string>
     <string name="metadata_wiped_successfully">¡Metadatos eliminados con éxito!</string>
