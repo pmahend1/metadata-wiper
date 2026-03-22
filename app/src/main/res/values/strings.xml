@@ -13,9 +13,7 @@
     <string name="remove_exif_data">Remove Exif data</string>
     <string name="no_removable_exif_data">No removable EXIF data found.</string>
     <string name="error_processing_files">Error processing files.</string>
-    <string name="image_saved_successfully">Image saved successfully!</string>
     <string name="failed_to_save_file">Failed to save file.</string>
-    <string name="images_saved_successfully">Images saved successfully!</string>
     <string name="failed_to_save_images">Failed to save images.</string>
     <string name="no_exif_data_found">No EXIF data found in the selected image.</string>
     <string name="tag">Tag</string>
@@ -24,13 +22,9 @@
     <string name="theme_dark">Dark</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="app_version">App Version</string>
-    <plurals name="images_selected">
-        <item quantity="one">%d image selected.</item>
-        <item quantity="other">%d images selected.</item>
-    </plurals>
     <plurals name="remove_exif_from_images">
         <item quantity="one">Remove Exif from %d image</item>
-        <item quantity="other">Remove Exif from %d images</item>
+        <item quantity="many">Remove Exif from %d images</item>
     </plurals>
     <string name="value_with_count">Value(%d)</string>
     <string name="metadata_wiped_successfully">Metadata wiped successfully!</string>
