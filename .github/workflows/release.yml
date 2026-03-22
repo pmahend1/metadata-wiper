@@ -1,0 +1,85 @@
+name: Build Release Bundle
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release App Bundle
+        run: ./gradlew bundleRelease
+
+      - name: Rename and Prepare Artifacts
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest 
+          $ErrorActionPreference = "Stop"
+
+          $buildFile = "app/build.gradle.kts"
+
+          if (-not (Test-Path $buildFile)) {
+            throw "Build file not found: $buildFile"
+          }
+
+          $content = Get-Content $buildFile -Raw
+          $versionName = ([regex]'versionName\s*=\s*"([^"]+)"').Match($content).Groups[1].Value
+
+          if (-not $versionName) { 
+            throw "versionName not found in $buildFile" 
+          }
+
+          Write-Host "Detected version: $versionName"
+
+          $outDir = "app/build/outputs"
+          $releaseDir = "release-output"
+
+          # Clean previous folder if any
+          if (Test-Path $releaseDir) { 
+            Remove-Item $releaseDir -Recurse -Force 
+          }
+          New-Item -ItemType Directory -Path $releaseDir | Out-Null
+
+          # AAB 
+          $bundleSrc = Join-Path $outDir "bundle/release/app-release.aab"
+          if (-not (Test-Path $bundleSrc)) { 
+            throw "AAB not found at: $bundleSrc"
+          }
+
+          $bundleDest = Join-Path $releaseDir "MetaDataWiper_${versionName}.aab"
+          Copy-Item $bundleSrc $bundleDest
+          Write-Host "AAB  -> $bundleDest"
+
+          # mapping file
+          $mappingSrc = Join-Path $outDir "mapping/release/mapping.txt"
+          if (Test-Path $mappingSrc) {
+            Copy-Item $mappingSrc $releaseDir
+            Write-Host "✓ mapping.txt copied"
+          }
+          else {
+            Write-Warning "mapping.txt not found — expected when minifyEnabled = false"
+          }
+
+          # Summary
+          Write-Host "`nRelease artifacts in '$releaseDir':"
+          Get-ChildItem $releaseDir | ForEach-Object { Write-Host "  $_" }
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-output/
