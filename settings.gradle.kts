@@ -25,4 +25,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MetaDataWiper"
-include(":app")
+include(":app", ":metadata")
