@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.prateekmahendrakar.metadatawiper"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.prateekmahendrakar.metadatawiper"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 140
         versionName = "1.4.0"
 
@@ -33,6 +33,7 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
