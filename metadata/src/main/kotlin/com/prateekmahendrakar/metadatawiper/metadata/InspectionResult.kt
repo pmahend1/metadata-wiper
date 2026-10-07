@@ -1,5 +1,5 @@
 package com.prateekmahendrakar.metadatawiper.metadata
 
-class InspectionResult{
-
-}
+data class InspectionResult(val format: FileFormat,
+                            val items: List<MetadataItem>,
+                            val warnings: List<String> = emptyList())

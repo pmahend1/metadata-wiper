@@ -5,3 +5,7 @@ plugins {
 kotlin {
     jvmToolchain(25)
 }
+
+dependencies {
+    testImplementation(libs.junit)
+}

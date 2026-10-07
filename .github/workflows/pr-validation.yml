@@ -23,5 +23,19 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
+      - name: Build, test and lint
+        run: ./gradlew assembleDebug :metadata:test testDebugUnitTest lintDebug
+
+      # A dependency can add INTERNET through manifest merging, so check the merged result.
+      - name: Check merged manifest has no INTERNET permission
+        run: |
+          ./gradlew :app:processReleaseMainManifest
+          manifests=$(find app/build/intermediates -path '*release*' -name AndroidManifest.xml)
+          if [ -z "$manifests" ]; then
+            echo "Merged release manifest not found"
+            exit 1
+          fi
+          if grep -l 'android.permission.INTERNET' $manifests; then
+            echo "The merged manifest declares android.permission.INTERNET"
+            exit 1
+          fi

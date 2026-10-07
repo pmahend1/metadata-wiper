@@ -1,4 +1,5 @@
 package com.prateekmahendrakar.metadatawiper.metadata
 
-class MalformedFileException {
-}
+import java.io.IOException
+
+class MalformedFileException(message: String) : IOException(message)
