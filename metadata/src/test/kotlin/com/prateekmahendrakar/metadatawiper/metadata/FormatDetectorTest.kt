@@ -1,7 +1,9 @@
 package com.prateekmahendrakar.metadatawiper.metadata
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import kotlin.random.Random
 
 class FormatDetectorTest {
@@ -58,6 +60,25 @@ class FormatDetectorTest {
     fun handlesFtypBoxLargerThanHeader() {
         val header = ftyp("heic", "mif1").also { it[3] = 0x7F }
         assertEquals(FileFormat.Heif, FormatDetector.detect(header))
+    }
+
+    @Test
+    fun detectsEveryFixture() {
+        val formatsByPrefix = mapOf("jpeg-" to FileFormat.Jpeg,
+                                    "png-" to FileFormat.Png,
+                                    "webp-" to FileFormat.WebP,
+                                    "heif-" to FileFormat.Heif,
+                                    "avif-" to FileFormat.Avif,
+                                    "gif-" to FileFormat.Gif,
+                                    "bmp-" to FileFormat.Bmp)
+        val fixtures = File(javaClass.getResource("/fixtures")!!.toURI()).listFiles()!!.sortedBy { it.name }
+        assertTrue(fixtures.isNotEmpty())
+
+        for (fixture in fixtures) {
+            val expected = formatsByPrefix.entries.single { fixture.name.startsWith(it.key) }.value
+            val header = fixture.inputStream().use { it.readNBytes(FormatDetector.HEADER_SIZE) }
+            assertEquals(fixture.name, expected, FormatDetector.detect(header))
+        }
     }
 
     private fun ftyp(majorBrand: String,
