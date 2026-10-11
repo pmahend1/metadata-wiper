@@ -1,10 +1,45 @@
-package com.prateekmahendrakar.metadatawiper.utils
+package com.prateekmahendrakar.metadatawiper.exif
 
 import android.annotation.SuppressLint
-import android.util.Log
+import android.os.Build
 import androidx.exifinterface.media.ExifInterface
+import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
+import java.io.InputStream
 
-fun Double.formatted(): String {
+// Human-readable EXIF tags for the detail table. Display only: stripping never relies on ExifInterface.
+object ExifDetailReader {
+
+    // region State
+
+    // Read reflectively so new ExifInterface tags show up without a list to maintain; R8 keeps them (proguard-rules.pro).
+    private val allTags: List<String> by lazy {
+        ExifInterface::class.java.fields.filter { it.name.startsWith("TAG_") && it.type == String::class.java }
+                                        .map { it.get(null) as String }
+    }
+
+    // endregion State
+
+    // region Methods
+
+    fun supports(format: FileFormat): Boolean {
+        return when (format) {
+            FileFormat.Jpeg, FileFormat.Png, FileFormat.WebP -> true
+            FileFormat.Heif -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+            else -> false
+        }
+    }
+
+    // Tags without a value are left out, so an empty map means "no EXIF".
+    fun read(input: InputStream): Map<String, String> {
+        val exif = ExifInterface(input)
+        return allTags.associateWith { formattedValue(exif, it) }
+                      .filterValues { it.isNotEmpty() }
+    }
+
+    // endregion Methods
+}
+
+private fun Double.formatted(): String {
     return if (this % 1.0 == 0.0) {
         this.toInt().toString()
     } else {
@@ -12,40 +47,9 @@ fun Double.formatted(): String {
     }
 }
 
-fun getEssentialExifTags(): Set<String> {
-    return setOf(ExifInterface.TAG_IMAGE_LENGTH,
-                 ExifInterface.TAG_IMAGE_WIDTH,
-                 ExifInterface.TAG_ORIENTATION,
-                 ExifInterface.TAG_LIGHT_SOURCE,
-                 ExifInterface.TAG_PHOTOMETRIC_INTERPRETATION,
-                 ExifInterface.TAG_SAMPLES_PER_PIXEL,
-                 ExifInterface.TAG_BITS_PER_SAMPLE,
-                 ExifInterface.TAG_COMPRESSION,
-                 ExifInterface.TAG_PLANAR_CONFIGURATION,
-                 ExifInterface.TAG_ROWS_PER_STRIP,
-                 ExifInterface.TAG_STRIP_BYTE_COUNTS,
-                 ExifInterface.TAG_STRIP_OFFSETS,
-                 ExifInterface.TAG_JPEG_INTERCHANGE_FORMAT,
-                 ExifInterface.TAG_JPEG_INTERCHANGE_FORMAT_LENGTH)
-}
-
-fun getAllExifTags(): Array<String> {
-    // This function remains to get ALL data for display purposes
-    return ExifInterface::class.java.fields.filter { it.name.startsWith("TAG_") && it.type == String::class.java }
-        .map { it.get(null) as String }
-        .toTypedArray()
-}
-
-fun getRemovableExifTags(): Array<String> {
-    // This function gets all tags EXCEPT the essential ones
-    val essentialTags = getEssentialExifTags()
-    return getAllExifTags().filterNot { it in essentialTags }.toTypedArray()
-}
-
 @SuppressLint("RestrictedApi")
-fun getFormattedExifValue(exif: ExifInterface, tag: String): String {
+private fun formattedValue(exif: ExifInterface, tag: String): String {
     val value = exif.getAttribute(tag)
-    Log.d("EXIF", "TAG: $tag, VALUE: $value")
     if (value == null) {
         return ""
     }

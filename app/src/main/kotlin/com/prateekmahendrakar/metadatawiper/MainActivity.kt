@@ -1,7 +1,7 @@
 package com.prateekmahendrakar.metadatawiper
 
 import android.content.pm.PackageInfo
-import android.net.Uri
+import android.widget.Toast
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,12 +56,14 @@ import com.prateekmahendrakar.metadatawiper.ui.ImageMetadataDialog
 import com.prateekmahendrakar.metadatawiper.ui.MetadataTable
 import com.prateekmahendrakar.metadatawiper.ui.SettingsDialog
 import com.prateekmahendrakar.metadatawiper.ui.theme.MetaDataWiperTheme
-import com.prateekmahendrakar.metadatawiper.utils.getFileName
 import com.prateekmahendrakar.metadatawiper.viewmodel.SettingsViewModel
+import com.prateekmahendrakar.metadatawiper.wipe.WipeUiState
+import com.prateekmahendrakar.metadatawiper.wipe.WipeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private val wipeViewModel: WipeViewModel by viewModels { WipeViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +73,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
             val overwriteOriginal by settingsViewModel.overwriteOriginal.collectAsState()
+            val wipeState by wipeViewModel.uiState.collectAsState()
             val useDarkTheme = when (theme) {
                 Theme.System -> isSystemInDarkTheme()
                 Theme.Light -> false
@@ -77,13 +81,24 @@ class MainActivity : ComponentActivity() {
             }
 
             MetaDataWiperTheme(darkTheme = useDarkTheme) {
-                var metadataMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-                var hasRemovableExifData by remember { mutableStateOf(false) }
-                var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
                 var showSettingsDialog by remember { mutableStateOf(false) }
 
                 val packageInfo: PackageInfo = packageManager.getPackageInfo(packageName, 0)
                 val versionName = packageInfo.versionName
+
+                val context = LocalContext.current
+                val summary = wipeState.summary
+                val wipedSuccessfully = stringResource(id = R.string.metadata_wiped_successfully)
+                val summaryText = summary?.let {
+                    stringResource(id = R.string.wipe_summary, it.cleaned, it.nothingToRemove, it.unsupported, it.failed)
+                }
+                LaunchedEffect(summary) {
+                    if (summary != null) {
+                        val message = if (summary.isCompleteSuccess) wipedSuccessfully else summaryText
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        wipeViewModel.onSummaryShown()
+                    }
+                }
 
                 if (showSettingsDialog) {
                     SettingsDialog(currentTheme = theme,
@@ -110,26 +125,19 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()) {
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // --- Action Buttons ---
-                        ActionButtons(hasRemovableExif = hasRemovableExifData,
-                                      isEnabled = selectedImageUris.isNotEmpty(),
-                                      onImagesSelected = { uris, metadata, hasRemovable ->
-                                          selectedImageUris = uris
-                                          metadataMap = metadata
-                                          hasRemovableExifData = hasRemovable
-                                      },
+                        ActionButtons(state = wipeState,
                                       overwriteOriginal = overwriteOriginal,
-                                      selectedImageUris = selectedImageUris,
-                                      onSuccess = {
-                                          selectedImageUris = emptyList()
-                                      })
+                                      onFilesSelected = { wipeViewModel.select(it) },
+                                      onOverwrite = { wipeViewModel.overwriteOriginals() },
+                                      onSaveTo = { wipeViewModel.saveTo(it) },
+                                      onSaveToFolder = { wipeViewModel.saveToFolder(it) })
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // --- Content Area ---
-                        if (selectedImageUris.size == 1) {
+                        val selectedFiles = wipeState.files
+                        if (selectedFiles.size == 1) {
                             Column(modifier = Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Image(painter = rememberAsyncImagePainter(selectedImageUris.first()),
+                                Image(painter = rememberAsyncImagePainter(selectedFiles.first().uri),
                                       contentDescription = stringResource(id = R.string.selected_image),
                                       modifier = Modifier
                                           .fillMaxWidth()
@@ -137,21 +145,21 @@ class MainActivity : ComponentActivity() {
                                           .padding(horizontal = 8.dp),
                                       contentScale = ContentScale.Fit)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Text(getFileName(LocalContext.current, selectedImageUris.first()) ?: "", style = MaterialTheme.typography.titleMedium)
+                                Text(selectedFiles.first().displayName, style = MaterialTheme.typography.titleMedium)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                MetadataTable(metadata = metadataMap, modifier = Modifier.padding(horizontal = 8.dp))
+                                MetadataTable(metadata = selectedFiles.first().exifDetails, modifier = Modifier.padding(horizontal = 8.dp))
                             }
-                        } else if (selectedImageUris.size > 1) {
+                        } else if (selectedFiles.size > 1) {
                             LazyVerticalGrid(columns = GridCells.Fixed(3),
                                              modifier = Modifier
                                                  .fillMaxSize()
                                                  .padding(horizontal = 4.dp),
                                              horizontalArrangement = Arrangement.spacedBy(4.dp),
                                              verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(selectedImageUris) { uri ->
+                                items(selectedFiles) { file ->
                                     var isImageMetadataModalVisible by remember { mutableStateOf(false) }
 
-                                    Image(painter = rememberAsyncImagePainter(uri),
+                                    Image(painter = rememberAsyncImagePainter(file.uri),
                                           contentDescription = stringResource(id = R.string.selected_image),
                                           contentScale = ContentScale.Fit,
                                           modifier = Modifier
@@ -160,7 +168,7 @@ class MainActivity : ComponentActivity() {
                                                   isImageMetadataModalVisible = !isImageMetadataModalVisible
                                               })
                                     if (isImageMetadataModalVisible) {
-                                        ImageMetadataDialog(uri) {
+                                        ImageMetadataDialog(file) {
                                             isImageMetadataModalVisible = false
                                         }
 
@@ -213,12 +221,12 @@ fun MainScreenPreview() {
                        .verticalScroll(rememberScrollState())) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                ActionButtons(hasRemovableExif = false,
-                              isEnabled = false,
-                              onImagesSelected = { _, _, _ -> },
+                ActionButtons(state = WipeUiState(),
                               overwriteOriginal = false,
-                              selectedImageUris = emptyList(),
-                              onSuccess = {})
+                              onFilesSelected = {},
+                              onOverwrite = {},
+                              onSaveTo = {},
+                              onSaveToFolder = {})
 
                 Spacer(modifier = Modifier.height(16.dp))
 

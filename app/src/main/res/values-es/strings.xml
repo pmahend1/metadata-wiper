@@ -10,9 +10,6 @@
     <string name="select_images">Seleccionar Imagen(es)</string>
     <string name="remove_exif_data">Eliminar datos Exif</string>
     <string name="no_removable_exif_data">No se encontraron datos Exif eliminables.</string>
-    <string name="error_processing_files">Error al procesar los archivos.</string>
-    <string name="failed_to_save_file">Error al guardar el archivo.</string>
-    <string name="failed_to_save_images">Error al guardar las imágenes.</string>
     <string name="no_exif_data_found">No se encontraron datos Exif en la imagen seleccionada.</string>
     <string name="tag">Etiqueta</string>
     <string name="theme_system">Sistema</string>
@@ -23,8 +20,14 @@
     <plurals name="remove_exif_from_images">
         <item quantity="one">Eliminar Exif de %d imagen</item>
         <item quantity="other">Eliminar Exif de %d imágenes</item>
-        <item quantity="many">%d images selected</item>
+        <item quantity="many">Eliminar Exif de %d imágenes</item>
     </plurals>
     <string name="value_with_count">Valor(%d)</string>
     <string name="metadata_wiped_successfully">¡Metadatos eliminados con éxito!</string>
+    <string name="wipe_summary">Limpiados: %1$d · Sin nada que eliminar: %2$d · No compatibles: %3$d · Con errores: %4$d</string>
+    <plurals name="files_cannot_be_cleaned">
+        <item quantity="one">%d archivo no se puede limpiar: su formato aún no es compatible o está dañado.</item>
+        <item quantity="many">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados.</item>
+        <item quantity="other">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados.</item>
+    </plurals>
 </resources>
