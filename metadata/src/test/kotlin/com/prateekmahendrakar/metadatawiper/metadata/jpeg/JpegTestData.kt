@@ -7,7 +7,8 @@ object JpegTestData {
 
     // region State
 
-    val fixtureNames = listOf("jpeg-camera.jpg", "jpeg-clean.jpg", "jpeg-cmyk.jpg", "jpeg-motion-photo.jpg", "jpeg-progressive.jpg")
+    val fixtureNames =
+        listOf("jpeg-camera.jpg", "jpeg-clean.jpg", "jpeg-cmyk.jpg", "jpeg-motion-photo.jpg", "jpeg-progressive.jpg")
 
     // endregion State
 
@@ -30,7 +31,8 @@ object JpegTestData {
     // Inserts segments straight after SOI, so the base image still decodes.
     fun withSegments(base: ByteArray,
                      vararg segments: ByteArray): ByteArray {
-        return base.copyOfRange(0, 2) + segments.fold(ByteArray(0)) { all, next -> all + next } + base.copyOfRange(2, base.size)
+        return base.copyOfRange(0, 2) + segments.fold(ByteArray(0)) { all, next -> all + next } + base.copyOfRange(2,
+                                                                                                                   base.size)
     }
 
     fun segments(jpeg: ByteArray): List<JpegSegment> = JpegSegmentReader(BinaryReader(ByteArrayChannel(jpeg))).read()

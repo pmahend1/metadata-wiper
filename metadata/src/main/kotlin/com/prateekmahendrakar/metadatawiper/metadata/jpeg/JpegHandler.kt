@@ -77,9 +77,16 @@ class JpegHandler : FormatHandler {
         for (segment in segments) {
             when {
                 segment.kind in copiedKinds -> copy(reader, segment.start, segment.end, output)
-                segment.kind == JpegSegmentKind.IccProfile && options.keepColorProfile -> copy(reader, segment.start, segment.end, output)
-                segment.kind == JpegSegmentKind.Jfif -> writeSegment(output, segment.marker, jfifWithoutThumbnail(reader, segment))
-                segment == firstExif && orientation != null -> writeSegment(output, JpegMarker.APP1, MinimalExifWriter.jpegApp1Payload(orientation))
+                segment.kind == JpegSegmentKind.IccProfile && options.keepColorProfile -> copy(reader,
+                                                                                               segment.start,
+                                                                                               segment.end,
+                                                                                               output)
+                segment.kind == JpegSegmentKind.Jfif -> writeSegment(output,
+                                                                     segment.marker,
+                                                                     jfifWithoutThumbnail(reader, segment))
+                segment == firstExif && orientation != null -> writeSegment(output,
+                                                                            JpegMarker.APP1,
+                                                                            MinimalExifWriter.jpegApp1Payload(orientation))
             }
         }
 
@@ -105,7 +112,7 @@ class JpegHandler : FormatHandler {
             return null
         }
         val orientation = segments.filter { it.kind == JpegSegmentKind.Exif }
-                                  .firstNotNullOfOrNull { readExif(reader, it)?.orientation }
+            .firstNotNullOfOrNull { readExif(reader, it)?.orientation }
         return orientation?.takeIf { it in 2..8 }
     }
 
@@ -118,15 +125,23 @@ class JpegHandler : FormatHandler {
             when (segment.kind) {
                 JpegSegmentKind.Exif -> items += exifItems(reader, segment, warnings)
                 JpegSegmentKind.Jfif -> items += jfifThumbnailItems(reader, segment)
-                JpegSegmentKind.JfifExtension -> items += MetadataItem(MetadataCategory.Thumbnail, "JFIF extension thumbnail", byteSize = segment.payloadLength)
-                JpegSegmentKind.Comment -> items += MetadataItem(MetadataCategory.Other, "Comment", readComment(reader, segment), segment.payloadLength)
+                JpegSegmentKind.JfifExtension -> items += MetadataItem(MetadataCategory.Thumbnail,
+                                                                       "JFIF extension thumbnail",
+                                                                       byteSize = segment.payloadLength)
+                JpegSegmentKind.Comment -> items += MetadataItem(MetadataCategory.Other,
+                                                                 "Comment",
+                                                                 readComment(reader, segment),
+                                                                 segment.payloadLength)
                 // A profile is split across several APP2 segments but is one thing to the user.
                 JpegSegmentKind.IccProfile -> if (segment == iccSegments.first()) {
-                    items += MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = iccSegments.sumOf { it.payloadLength - ICC_CHUNK_HEADER_SIZE })
+                    items += MetadataItem(MetadataCategory.ColorProfile,
+                                          "ICC profile",
+                                          byteSize = iccSegments.sumOf { it.payloadLength - ICC_CHUNK_HEADER_SIZE })
                 }
                 else -> {
                     val label = segmentLabels[segment.kind] ?: continue
-                    val category = if (segment.kind == JpegSegmentKind.MultiPicture) MetadataCategory.EmbeddedMedia else MetadataCategory.Other
+                    val category =
+                        if (segment.kind == JpegSegmentKind.MultiPicture) MetadataCategory.EmbeddedMedia else MetadataCategory.Other
                     val detail = if (segment.kind == JpegSegmentKind.OtherApplication) applicationName(segment) else ""
                     items += MetadataItem(category, label, detail, segment.payloadLength)
                 }
@@ -164,7 +179,9 @@ class JpegHandler : FormatHandler {
     private fun readExif(reader: BinaryReader,
                          segment: JpegSegment): TiffSummary? {
         return try {
-            TiffSummaryReader(reader, segment.payloadStart + EXIF_IDENTIFIER_SIZE, segment.payloadLength - EXIF_IDENTIFIER_SIZE).read()
+            TiffSummaryReader(reader,
+                              segment.payloadStart + EXIF_IDENTIFIER_SIZE,
+                              segment.payloadLength - EXIF_IDENTIFIER_SIZE).read()
         } catch (_: MalformedFileException) {
             null
         }

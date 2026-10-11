@@ -13,16 +13,19 @@ class JpegSegmentReader(private val reader: BinaryReader) {
 
     // region State
 
-    private val applicationIdentifiers = listOf(JpegApplicationIdentifier(JpegMarker.APP0, "JFIF\u0000", JpegSegmentKind.Jfif),
-                                                JpegApplicationIdentifier(JpegMarker.APP0, "JFXX\u0000", JpegSegmentKind.JfifExtension),
-                                                JpegApplicationIdentifier(JpegMarker.APP1, "Exif\u0000", JpegSegmentKind.Exif),
-                                                JpegApplicationIdentifier(JpegMarker.APP1, "http://ns.adobe.com/xap/1.0/\u0000", JpegSegmentKind.Xmp),
-                                                JpegApplicationIdentifier(JpegMarker.APP1, "http://ns.adobe.com/xmp/extension/\u0000", JpegSegmentKind.ExtendedXmp),
-                                                JpegApplicationIdentifier(JpegMarker.APP2, "ICC_PROFILE\u0000", JpegSegmentKind.IccProfile),
-                                                JpegApplicationIdentifier(JpegMarker.APP2, "MPF\u0000", JpegSegmentKind.MultiPicture),
-                                                JpegApplicationIdentifier(JpegMarker.APP2, "FPXR\u0000", JpegSegmentKind.FlashPix),
-                                                JpegApplicationIdentifier(JpegMarker.APP13, "Photoshop 3.0\u0000", JpegSegmentKind.Photoshop),
-                                                JpegApplicationIdentifier(JpegMarker.APP14, "Adobe", JpegSegmentKind.Adobe))
+    private val applicationIdentifiers =
+        listOf(JpegApplicationIdentifier(JpegMarker.APP0, "JFIF\u0000", JpegSegmentKind.Jfif),
+               JpegApplicationIdentifier(JpegMarker.APP0, "JFXX\u0000", JpegSegmentKind.JfifExtension),
+               JpegApplicationIdentifier(JpegMarker.APP1, "Exif\u0000", JpegSegmentKind.Exif),
+               JpegApplicationIdentifier(JpegMarker.APP1, "http://ns.adobe.com/xap/1.0/\u0000", JpegSegmentKind.Xmp),
+               JpegApplicationIdentifier(JpegMarker.APP1,
+                                         "http://ns.adobe.com/xmp/extension/\u0000",
+                                         JpegSegmentKind.ExtendedXmp),
+               JpegApplicationIdentifier(JpegMarker.APP2, "ICC_PROFILE\u0000", JpegSegmentKind.IccProfile),
+               JpegApplicationIdentifier(JpegMarker.APP2, "MPF\u0000", JpegSegmentKind.MultiPicture),
+               JpegApplicationIdentifier(JpegMarker.APP2, "FPXR\u0000", JpegSegmentKind.FlashPix),
+               JpegApplicationIdentifier(JpegMarker.APP13, "Photoshop 3.0\u0000", JpegSegmentKind.Photoshop),
+               JpegApplicationIdentifier(JpegMarker.APP14, "Adobe", JpegSegmentKind.Adobe))
 
     private val longestIdentifier = applicationIdentifiers.maxOf { it.prefix.size }
 
@@ -71,7 +74,11 @@ class JpegSegmentReader(private val reader: BinaryReader) {
             return JpegSegment(marker, JpegSegmentKind.EndOfImage, start, reader.position, 0, reader.position)
         }
 
-        val kind = kindOf(marker) ?: throw MalformedFileException("Unsupported JPEG marker 0x${"%02X".format(Locale.ROOT, marker)} at offset $start")
+        val kind =
+            kindOf(marker) ?: throw MalformedFileException("Unsupported JPEG marker 0x${
+                "%02X".format(Locale.ROOT,
+                              marker)
+            } at offset $start")
         val length = reader.readU16()
         if (length < LENGTH_FIELD_SIZE) {
             throw MalformedFileException("JPEG segment at offset $start has an invalid length $length")
@@ -80,7 +87,8 @@ class JpegSegmentReader(private val reader: BinaryReader) {
         val payloadLength = length - LENGTH_FIELD_SIZE
         reader.requireRemaining(payloadLength)
 
-        val identifiedKind = if (kind == JpegSegmentKind.OtherApplication) identifyApplication(marker, payloadLength) else kind
+        val identifiedKind =
+            if (kind == JpegSegmentKind.OtherApplication) identifyApplication(marker, payloadLength) else kind
         val payloadEnd = payloadStart + payloadLength
         val end = if (kind == JpegSegmentKind.Scan) findScanEnd(payloadEnd) else payloadEnd
         reader.seek(end)
@@ -107,7 +115,7 @@ class JpegSegmentReader(private val reader: BinaryReader) {
 
         // Too short to hold the fields the handler reads, so it's treated as an unknown segment and removed.
         val tooShort = (kind == JpegSegmentKind.Exif && payloadLength < MIN_EXIF_PAYLOAD) ||
-                       (kind == JpegSegmentKind.Jfif && payloadLength < JFIF_FIXED_PAYLOAD)
+            (kind == JpegSegmentKind.Jfif && payloadLength < JFIF_FIXED_PAYLOAD)
         return if (tooShort) JpegSegmentKind.OtherApplication else kind
     }
 

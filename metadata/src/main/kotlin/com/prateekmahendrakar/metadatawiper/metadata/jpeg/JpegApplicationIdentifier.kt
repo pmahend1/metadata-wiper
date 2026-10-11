@@ -14,10 +14,8 @@ class JpegApplicationIdentifier(val marker: Int,
     // region Methods
 
     fun matches(payloadStart: ByteArray): Boolean {
-        if (payloadStart.size < prefix.size) {
-            return false
-        }
-        return prefix.indices.all { payloadStart[it] == prefix[it] }
+        return payloadStart.size >= prefix.size &&
+            prefix.indices.all { payloadStart[it] == prefix[it] }
     }
 
     // endregion Methods

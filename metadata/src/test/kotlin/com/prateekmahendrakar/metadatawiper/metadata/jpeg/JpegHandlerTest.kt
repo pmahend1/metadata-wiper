@@ -135,7 +135,8 @@ class JpegHandlerTest {
         val input = fixture("jpeg-cmyk.jpg")
         val adobe = segments(input).single { it.kind == JpegSegmentKind.Adobe }
         val output = strip(input).first
-        assertArrayEquals(bytesOf(input, adobe), bytesOf(output, segments(output).single { it.kind == JpegSegmentKind.Adobe }))
+        assertArrayEquals(bytesOf(input, adobe),
+                          bytesOf(output, segments(output).single { it.kind == JpegSegmentKind.Adobe }))
     }
 
     @Test
@@ -157,7 +158,8 @@ class JpegHandlerTest {
         val chunk2 = applicationSegment(JpegMarker.APP2, "ICC_PROFILE\u0000", bytes(2, 2) + ByteArray(50))
         val input = withSegments(fixture("jpeg-clean.jpg"), chunk1, chunk2)
 
-        assertEquals(listOf(MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = 150)), inspect(input).items)
+        assertEquals(listOf(MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = 150)),
+                     inspect(input).items)
 
         val (kept, keptReport) = strip(input, StripOptions(keepColorProfile = true))
         assertArrayEquals(input, kept)
@@ -184,7 +186,9 @@ class JpegHandlerTest {
     fun stripRemovesOtherApplicationSegmentsAndComments() {
         val input = withSegments(fixture("jpeg-clean.jpg"),
                                  applicationSegment(JpegMarker.APP0, "JFXX\u0000", ByteArray(20)),
-                                 applicationSegment(JpegMarker.APP1, "http://ns.adobe.com/xmp/extension/\u0000", ByteArray(20)),
+                                 applicationSegment(JpegMarker.APP1,
+                                                    "http://ns.adobe.com/xmp/extension/\u0000",
+                                                    ByteArray(20)),
                                  applicationSegment(JpegMarker.APP2, "MPF\u0000", ByteArray(20)),
                                  applicationSegment(JpegMarker.APP2, "FPXR\u0000", ByteArray(20)),
                                  applicationSegment(JpegMarker.APP0 + 12, "Ducky", ByteArray(20)),
@@ -194,7 +198,13 @@ class JpegHandlerTest {
         val (output, report) = strip(input)
 
         assertArrayEquals(fixture("jpeg-clean.jpg"), output)
-        assertEquals(listOf("JFIF extension thumbnail", "Extended XMP", "Multi-picture index", "FlashPix data", "Application segment", "Application segment", "Comment"),
+        assertEquals(listOf("JFIF extension thumbnail",
+                            "Extended XMP",
+                            "Multi-picture index",
+                            "FlashPix data",
+                            "Application segment",
+                            "Application segment",
+                            "Comment"),
                      report.removed.map { it.label })
         assertEquals(listOf("APP12", "APP15"), report.removed.filter { it.label == "Application segment" }.map { it.detail })
     }
@@ -248,7 +258,7 @@ class JpegHandlerTest {
 
     private fun imageData(jpeg: ByteArray): ByteArray {
         return segments(jpeg).filter { it.kind in imageKinds }
-                             .fold(ByteArray(0)) { all, segment -> all + bytesOf(jpeg, segment) }
+            .fold(ByteArray(0)) { all, segment -> all + bytesOf(jpeg, segment) }
     }
 
     private fun assertHas(items: List<MetadataItem>,
