@@ -32,8 +32,19 @@ object ExifDetailReader {
     // Tags without a value are left out, so an empty map means "no EXIF".
     fun read(input: InputStream): Map<String, String> {
         val exif = ExifInterface(input)
-        return allTags.associateWith { formattedValue(exif, it) }
+        return allTags.filter { isStoredInFile(exif, it) }
+                      .associateWith { formattedValue(exif, it) }
                       .filterValues { it.isNotEmpty() }
+    }
+
+    /*
+     * ExifInterface invents values the file doesn't have: Orientation 0 ("Undefined"), LightSource 0
+     * ("Unknown"), and width/length copied from the JPEG frame header. Those have no offset in the
+     * file, so showing them would list metadata that isn't there, e.g. after a wipe.
+     */
+    private fun isStoredInFile(exif: ExifInterface, tag: String): Boolean {
+        val range = exif.getAttributeRange(tag)
+        return range != null && range[0] >= 0
     }
 
     // endregion Methods
