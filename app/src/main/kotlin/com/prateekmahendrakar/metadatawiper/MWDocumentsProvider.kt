@@ -108,7 +108,12 @@ class MWDocumentsProvider : DocumentsProvider() {
         if (splitIndex < 0) throw FileNotFoundException("Missing root for $docId")
 
         val path = docId.substring(splitIndex + 1)
-        target = File(target, path)
+        target = File(target, path).canonicalFile
+        // Canonicalizing resolves ".." and symlinks, so anything outside the base directory is caught here.
+        val baseDir = mBaseDir.canonicalFile
+        if (target != baseDir && target.path.startsWith(baseDir.path + File.separator) == false) {
+            throw FileNotFoundException("Document $docId is outside the provider root")
+        }
         if (!target.exists()) {
             throw FileNotFoundException("Missing file for $docId at $target")
         }

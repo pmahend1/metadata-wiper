@@ -12,9 +12,6 @@
     <string name="select_images">Select Image(s)</string>
     <string name="remove_exif_data">Remove Exif data</string>
     <string name="no_removable_exif_data">No removable EXIF data found.</string>
-    <string name="error_processing_files">Error processing files.</string>
-    <string name="failed_to_save_file">Failed to save file.</string>
-    <string name="failed_to_save_images">Failed to save images.</string>
     <string name="no_exif_data_found">No EXIF data found in the selected image.</string>
     <string name="tag">Tag</string>
     <string name="theme_system">System</string>
@@ -28,4 +25,9 @@
     </plurals>
     <string name="value_with_count">Value(%d)</string>
     <string name="metadata_wiped_successfully">Metadata wiped successfully!</string>
+    <string name="wipe_summary">Cleaned: %1$d · Nothing to remove: %2$d · Unsupported: %3$d · Failed: %4$d</string>
+    <plurals name="files_cannot_be_cleaned">
+        <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged.</item>
+        <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged.</item>
+    </plurals>
 </resources>
