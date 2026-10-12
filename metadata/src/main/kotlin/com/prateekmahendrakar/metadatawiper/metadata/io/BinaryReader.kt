@@ -1,6 +1,7 @@
 package com.prateekmahendrakar.metadatawiper.metadata.io
 
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.SeekableByteChannel
@@ -25,6 +26,10 @@ class BinaryReader(private val channel: SeekableByteChannel) {
 
     val remaining: Long
         get() = size - position
+
+    private companion object {
+        const val COPY_CHUNK_SIZE = 64 * 1024
+    }
 
     // endregion State
 
@@ -67,6 +72,19 @@ class BinaryReader(private val channel: SeekableByteChannel) {
     }
 
     fun readAscii(count: Int): String = String(readBytes(count), Charsets.US_ASCII)
+
+    // Copies [start, end) in chunks, so a multi-megabyte payload never sits in memory whole.
+    fun copyTo(output: OutputStream,
+               start: Long,
+               end: Long) {
+        seek(start)
+        var left = end - start
+        while (left > 0) {
+            val chunk = readBytes(minOf(left, COPY_CHUNK_SIZE.toLong()).toInt())
+            output.write(chunk)
+            left -= chunk.size
+        }
+    }
 
     fun requireRemaining(count: Long) {
         if (count < 0 || count > remaining) {

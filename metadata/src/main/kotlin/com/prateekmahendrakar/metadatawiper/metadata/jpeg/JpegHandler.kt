@@ -3,15 +3,14 @@ package com.prateekmahendrakar.metadatawiper.metadata.jpeg
 import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandler
 import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
-import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
+import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifInspection
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.MinimalExifWriter
-import com.prateekmahendrakar.metadatawiper.metadata.tiff.TiffSummary
-import com.prateekmahendrakar.metadatawiper.metadata.tiff.TiffSummaryReader
 import java.io.OutputStream
 import java.nio.channels.SeekableByteChannel
 
@@ -42,8 +41,6 @@ class JpegHandler : FormatHandler {
                                     JpegSegmentKind.Adobe)
 
     private companion object {
-        const val COPY_CHUNK_SIZE = 64 * 1024
-        const val EXIF_IDENTIFIER_SIZE = 6L
         const val ICC_CHUNK_HEADER_SIZE = 14L
         const val JFIF_FIXED_PAYLOAD = 14
         const val JFIF_THUMBNAIL_WIDTH = 12
@@ -76,11 +73,10 @@ class JpegHandler : FormatHandler {
         val firstExif = segments.firstOrNull { it.kind == JpegSegmentKind.Exif }
         for (segment in segments) {
             when {
-                segment.kind in copiedKinds -> copy(reader, segment.start, segment.end, output)
-                segment.kind == JpegSegmentKind.IccProfile && options.keepColorProfile -> copy(reader,
-                                                                                               segment.start,
-                                                                                               segment.end,
-                                                                                               output)
+                segment.kind in copiedKinds -> reader.copyTo(output, segment.start, segment.end)
+                segment.kind == JpegSegmentKind.IccProfile && options.keepColorProfile -> reader.copyTo(output,
+                                                                                                        segment.start,
+                                                                                                        segment.end)
                 segment.kind == JpegSegmentKind.Jfif -> writeSegment(output,
                                                                      segment.marker,
                                                                      jfifWithoutThumbnail(reader, segment))
@@ -90,30 +86,15 @@ class JpegHandler : FormatHandler {
             }
         }
 
-        val (kept, removed) = items.partition { isKept(it, options, orientation) }
-        return StripReport(removed, kept, warnings)
+        return StripReport.of(items, warnings, options, orientationWritten = orientation != null)
     }
 
-    private fun isKept(item: MetadataItem,
-                       options: StripOptions,
-                       keptOrientation: Int?): Boolean {
-        return when (item.category) {
-            MetadataCategory.ColorProfile -> options.keepColorProfile
-            MetadataCategory.Orientation -> keptOrientation != null
-            else -> false
-        }
-    }
-
-    // Orientation 1 is the default, so a minimal EXIF is only worth writing for the other seven.
     private fun keptOrientation(reader: BinaryReader,
                                 segments: List<JpegSegment>,
                                 options: StripOptions): Int? {
-        if (options.keepOrientation == false) {
-            return null
-        }
         val orientation = segments.filter { it.kind == JpegSegmentKind.Exif }
-            .firstNotNullOfOrNull { readExif(reader, it)?.orientation }
-        return orientation?.takeIf { it in 2..8 }
+                                  .firstNotNullOfOrNull { inspectExif(reader, it).orientation }
+        return options.orientationToWrite(orientation)
     }
 
     private fun findItems(reader: BinaryReader,
@@ -123,7 +104,13 @@ class JpegHandler : FormatHandler {
         val iccSegments = segments.filter { it.kind == JpegSegmentKind.IccProfile }
         for (segment in segments) {
             when (segment.kind) {
-                JpegSegmentKind.Exif -> items += exifItems(reader, segment, warnings)
+                JpegSegmentKind.Exif -> {
+                    val exif = inspectExif(reader, segment)
+                    if (exif.isDamaged) {
+                        warnings += ExifBlockInspector.DAMAGED_WARNING
+                    }
+                    items += exif.items
+                }
                 JpegSegmentKind.Jfif -> items += jfifThumbnailItems(reader, segment)
                 JpegSegmentKind.JfifExtension -> items += MetadataItem(MetadataCategory.Thumbnail,
                                                                        "JFIF extension thumbnail",
@@ -155,50 +142,9 @@ class JpegHandler : FormatHandler {
         return items
     }
 
-    /*
-     * The summary lists the tags worth naming, but an EXIF block can hold plenty it doesn't
-     * name, so the block itself is reported too. The one exception is the minimal EXIF this
-     * handler writes, which must re-inspect as orientation only for verification to pass.
-     */
-    private fun exifItems(reader: BinaryReader,
-                          segment: JpegSegment,
-                          warnings: MutableList<String>): List<MetadataItem> {
-        val blockItem = MetadataItem(MetadataCategory.Other, "EXIF block", byteSize = segment.payloadLength)
-        val summary = readExif(reader, segment)
-        if (summary == null) {
-            warnings += "An EXIF block is damaged, so its contents can't be listed. It is removed all the same."
-            return listOf(blockItem)
-        }
-        if (isMinimalExif(reader, segment, summary.orientation)) {
-            return summary.items
-        }
-        return summary.items + blockItem
-    }
-
-    // A damaged EXIF block is removed anyway, so it shouldn't stop the rest of the file being cleaned.
-    private fun readExif(reader: BinaryReader,
-                         segment: JpegSegment): TiffSummary? {
-        return try {
-            TiffSummaryReader(reader,
-                              segment.payloadStart + EXIF_IDENTIFIER_SIZE,
-                              segment.payloadLength - EXIF_IDENTIFIER_SIZE).read()
-        } catch (_: MalformedFileException) {
-            null
-        }
-    }
-
-    private fun isMinimalExif(reader: BinaryReader,
-                              segment: JpegSegment,
-                              orientation: Int?): Boolean {
-        if (orientation == null || orientation !in 1..8) {
-            return false
-        }
-        val minimal = MinimalExifWriter.jpegApp1Payload(orientation)
-        if (segment.payloadLength != minimal.size.toLong()) {
-            return false
-        }
-        reader.seek(segment.payloadStart)
-        return reader.readBytes(minimal.size).contentEquals(minimal)
+    private fun inspectExif(reader: BinaryReader,
+                            segment: JpegSegment): ExifInspection {
+        return ExifBlockInspector.inspect(reader, segment.payloadStart, segment.payloadLength)
     }
 
     private fun jfifThumbnailItems(reader: BinaryReader,
@@ -235,19 +181,6 @@ class JpegHandler : FormatHandler {
                             count: Int): ByteArray {
         reader.seek(segment.payloadStart)
         return reader.readBytes(count)
-    }
-
-    private fun copy(reader: BinaryReader,
-                     from: Long,
-                     to: Long,
-                     output: OutputStream) {
-        reader.seek(from)
-        var remaining = to - from
-        while (remaining > 0) {
-            val chunk = reader.readBytes(minOf(remaining, COPY_CHUNK_SIZE.toLong()).toInt())
-            output.write(chunk)
-            remaining -= chunk.size
-        }
     }
 
     private fun writeSegment(output: OutputStream,

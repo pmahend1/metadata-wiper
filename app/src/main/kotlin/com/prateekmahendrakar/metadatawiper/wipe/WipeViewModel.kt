@@ -8,7 +8,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandlerRegistry
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
+import com.prateekmahendrakar.metadatawiper.metadata.bmp.BmpHandler
+import com.prateekmahendrakar.metadatawiper.metadata.gif.GifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
+import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
+import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
 import com.prateekmahendrakar.metadatawiper.storage.DocumentStore
 import com.prateekmahendrakar.metadatawiper.storage.TempFileStore
 import com.prateekmahendrakar.metadatawiper.verify.DecodeVerifier
@@ -42,7 +46,11 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                 val useCase = WipeFilesUseCase(DocumentStore(application.contentResolver),
                                                tempFileStore,
                                                DecodeVerifier(),
-                                               FormatHandlerRegistry(listOf(JpegHandler())))
+                                               FormatHandlerRegistry(listOf(JpegHandler(),
+                                                                            PngHandler(),
+                                                                            WebPHandler(),
+                                                                            GifHandler(),
+                                                                            BmpHandler())))
                 WipeViewModel(useCase, tempFileStore)
             }
         }
