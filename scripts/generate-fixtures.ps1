@@ -5,8 +5,8 @@ tests. The output is committed, so tests don't need these tools installed.
 Requires ImageMagick 7 (`magick`, with HEIC/AVIF support) and exiftool on PATH.
 All metadata is fake: no fixture may contain personal data.
 
-Not generated yet: APNG (ImageMagick's APNG writer needs ffmpeg) and ICC-profile fixtures
-(system ICC files aren't ours to redistribute). Both come with the PNG milestone.
+Two things are built by hand instead: the APNG (ImageMagick's APNG writer needs ffmpeg) and
+the ICC profile (system profiles aren't ours to redistribute).
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -62,6 +62,130 @@ $cameraExif = @(
     '-EXIF:GPSAltitudeRef=0'
 )
 
+<#
+Big-endian integers, as PNG and ICC store them. BitConverter is little-endian on every
+platform .NET runs on, so the low bytes are taken and reversed.
+#>
+function ConvertTo-BigEndian([uint64] $value,
+                             [int] $size = 4) {
+    [byte[]] $bytes = [System.BitConverter]::GetBytes($value)[0..($size - 1)]
+    [array]::Reverse($bytes)
+    return , $bytes
+}
+
+function Join-Bytes([object[]] $parts) {
+    $stream = [System.IO.MemoryStream]::new()
+    foreach ($part in $parts) {
+        $stream.Write([byte[]] $part, 0, $part.Length)
+    }
+    return , $stream.ToArray()
+}
+
+function Get-Ascii([string] $text) {
+    return , [System.Text.Encoding]::ASCII.GetBytes($text)
+}
+
+# .NET only ships CRC-32 in the System.IO.Hashing package, so this is the bitwise version from the PNG spec.
+function Get-Crc32([byte[]] $bytes) {
+    [uint32] $crc = 0xFFFFFFFFu
+    foreach ($byte in $bytes) {
+        $crc = $crc -bxor $byte
+        for ($bit = 0; $bit -lt 8; $bit++) {
+            if (($crc -band 1) -eq 1) {
+                $crc = ($crc -shr 1) -bxor 0xEDB88320u
+            } else {
+                $crc = $crc -shr 1
+            }
+        }
+    }
+    return [uint32] ($crc -bxor 0xFFFFFFFFu)
+}
+
+function New-PngChunk([string] $type,
+                      [byte[]] $data) {
+    $typeAndData = Join-Bytes @((Get-Ascii $type), $data)
+    return Join-Bytes @((ConvertTo-BigEndian $data.Length), $typeAndData, (ConvertTo-BigEndian (Get-Crc32 $typeAndData)))
+}
+
+function Get-PngChunkData([string] $path,
+                          [string] $type) {
+    $bytes = [System.IO.File]::ReadAllBytes($path)
+    $found = [System.Collections.Generic.List[byte[]]]::new()
+    $offset = 8
+    while ($offset -lt $bytes.Length) {
+        $length = [int] (([uint32] $bytes[$offset] -shl 24) -bor ([uint32] $bytes[$offset + 1] -shl 16) -bor
+                         ([uint32] $bytes[$offset + 2] -shl 8) -bor [uint32] $bytes[$offset + 3])
+        if ([System.Text.Encoding]::ASCII.GetString($bytes, $offset + 4, 4) -eq $type) {
+            $found.Add($bytes[($offset + 8)..($offset + 7 + $length)])
+        }
+        $offset += 12 + $length
+    }
+    return , $found
+}
+
+<#
+A minimal ICC v2 display profile: sRGB primaries, D50 white point and a plain 2.2 gamma.
+Close enough to render sensibly, and ours to commit. Layout is a 128-byte header, the tag
+table, then each tag's data padded to 4 bytes.
+#>
+function New-IccProfile {
+    function ConvertTo-S15Fixed16([double] $value) {
+        return ConvertTo-BigEndian ([uint32] [math]::Round($value * 65536))
+    }
+
+    function New-XyzTag([double] $x,
+                        [double] $y,
+                        [double] $z) {
+        return Join-Bytes @((Get-Ascii 'XYZ '), [byte[]]::new(4),
+                            (ConvertTo-S15Fixed16 $x), (ConvertTo-S15Fixed16 $y), (ConvertTo-S15Fixed16 $z))
+    }
+
+    # textDescriptionType: ASCII, then empty Unicode and ScriptCode descriptions.
+    $name = Get-Ascii "Fixture RGB`0"
+    $description = Join-Bytes @((Get-Ascii 'desc'), [byte[]]::new(4), (ConvertTo-BigEndian $name.Length), $name,
+                                [byte[]]::new(4 + 4 + 2 + 1 + 67))
+    $copyright = Join-Bytes @((Get-Ascii 'text'), [byte[]]::new(4), (Get-Ascii "No copyright, use freely`0"))
+    $gamma = Join-Bytes @((Get-Ascii 'curv'), [byte[]]::new(4), (ConvertTo-BigEndian 1), (ConvertTo-BigEndian 0x0233 2))
+
+    $tags = [ordered] @{
+        desc = $description
+        cprt = $copyright
+        wtpt = New-XyzTag 0.9642 1.0 0.8249
+        rXYZ = New-XyzTag 0.4361 0.2225 0.0139
+        gXYZ = New-XyzTag 0.3851 0.7169 0.0971
+        bXYZ = New-XyzTag 0.1431 0.0606 0.7141
+        rTRC = $gamma
+        gTRC = $gamma
+        bTRC = $gamma
+    }
+
+    $offset = 128 + 4 + 12 * $tags.Count
+    $table = [System.Collections.Generic.List[byte[]]]::new()
+    $data = [System.Collections.Generic.List[byte[]]]::new()
+    foreach ($signature in $tags.Keys) {
+        $bytes = $tags[$signature]
+        $padding = (4 - $bytes.Length % 4) % 4
+        $table.Add((Join-Bytes @((Get-Ascii $signature), (ConvertTo-BigEndian $offset), (ConvertTo-BigEndian $bytes.Length))))
+        $data.Add((Join-Bytes @($bytes, [byte[]]::new($padding))))
+        $offset += $bytes.Length + $padding
+    }
+
+    $header = Join-Bytes @((ConvertTo-BigEndian $offset), [byte[]]::new(4), (ConvertTo-BigEndian 0x02100000),
+                           (Get-Ascii 'mntrRGB XYZ '),
+                           (ConvertTo-BigEndian 2026 2), (ConvertTo-BigEndian 9 2), (ConvertTo-BigEndian 12 2),
+                           (ConvertTo-BigEndian 14 2), (ConvertTo-BigEndian 30 2), (ConvertTo-BigEndian 0 2),
+                           (Get-Ascii 'acsp'), [byte[]]::new(28),
+                           (ConvertTo-S15Fixed16 0.9642), (ConvertTo-S15Fixed16 1.0), (ConvertTo-S15Fixed16 0.8249),
+                           [byte[]]::new(48))
+    return Join-Bytes (@($header, (ConvertTo-BigEndian $tags.Count)) + $table + $data)
+}
+
+# fcTL for a full-canvas 64×48 frame shown for 1/5 s.
+function New-ApngFrameControl([int] $sequence) {
+    return Join-Bytes @((ConvertTo-BigEndian $sequence), (ConvertTo-BigEndian 64), (ConvertTo-BigEndian 48),
+                        [byte[]]::new(8), (ConvertTo-BigEndian 1 2), (ConvertTo-BigEndian 5 2), [byte[]] (0, 0))
+}
+
 $xmp = @(
     '-XMP-dc:Creator=Jane Fixture',
     '-XMP-xmp:CreatorTool=Fixture Editor 2.0',
@@ -71,12 +195,17 @@ $xmp = @(
 # endregion Helpers
 
 try {
+    $icc = Join-Path $work 'fixture.icc'
+    [System.IO.File]::WriteAllBytes($icc, (New-IccProfile))
+
     # region JPEG
 
     $thumbnail = Join-Path $work 'thumbnail.jpg'
     magick -size 32x24 xc:'#20a020' -strip $thumbnail
 
     New-BaseImage (Fixture 'jpeg-clean.jpg')
+
+    New-BaseImage (Fixture 'jpeg-icc.jpg') @('-profile', $icc)
 
     $camera = Fixture 'jpeg-camera.jpg'
     New-BaseImage $camera
@@ -133,6 +262,35 @@ try {
         '-PNG:ModifyDate=2026:09:12 14:30:00'
     ))
 
+    # ImageMagick's PNG writer drops a -profile it didn't convert with, so exiftool adds the iCCP chunk.
+    $pngIcc = Fixture 'png-icc.png'
+    New-BaseImage $pngIcc
+    Set-Metadata $pngIcc @("-ICC_Profile<=$icc")
+
+    <#
+    Two solid frames, the first doubling as the default image. Their IDAT data comes from
+    ImageMagick; the APNG chunks around it are written here, with a tEXt and tIME to strip.
+    #>
+    $frames = @('#d04040', '#40d040') | ForEach-Object -Begin { $index = 0 } -Process {
+        $path = Join-Path $work "frame$index.png"
+        magick -size 64x48 xc:$_ -strip -define png:exclude-chunks=date,time -depth 8 PNG24:$path
+        $index++
+        $path
+    }
+    $imageHeader = (Get-PngChunkData $frames[0] 'IHDR')[0]
+    $frameData = $frames | ForEach-Object { , (Join-Bytes (Get-PngChunkData $_ 'IDAT')) }
+    $apng = Join-Bytes @([byte[]] (0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A),
+                         (New-PngChunk 'IHDR' $imageHeader),
+                         (New-PngChunk 'acTL' (Join-Bytes @((ConvertTo-BigEndian 2), (ConvertTo-BigEndian 0)))),
+                         (New-PngChunk 'tEXt' (Get-Ascii "Comment`0Fixture APNG comment")),
+                         (New-PngChunk 'tIME' (Join-Bytes @((ConvertTo-BigEndian 2026 2), [byte[]] (9, 12, 14, 30, 0)))),
+                         (New-PngChunk 'fcTL' (New-ApngFrameControl 0)),
+                         (New-PngChunk 'IDAT' $frameData[0]),
+                         (New-PngChunk 'fcTL' (New-ApngFrameControl 1)),
+                         (New-PngChunk 'fdAT' (Join-Bytes @((ConvertTo-BigEndian 2), $frameData[1]))),
+                         (New-PngChunk 'IEND' ([byte[]]::new(0))))
+    [System.IO.File]::WriteAllBytes((Fixture 'png-animated.png'), $apng)
+
     # endregion PNG
 
     # region WebP
@@ -148,6 +306,8 @@ try {
     New-BaseImage $webPLossless @('-define', 'webp:lossless=true')
     Set-Metadata $webPLossless ($cameraExif + $xmp)
 
+    New-BaseImage (Fixture 'webp-icc.webp') @('-quality', '80', '-profile', $icc)
+
     # endregion WebP
 
     # region GIF
@@ -161,6 +321,9 @@ try {
            xc:'#d04040' xc:'#40d040' xc:'#4040d0' `
            -strip $animatedGif
     Set-Metadata $animatedGif @('-Comment=Fixture animated GIF comment')
+
+    # ImageMagick stores the profile as an ICCRGBG1 application extension.
+    New-BaseImage (Fixture 'gif-icc.gif') @('-profile', $icc)
 
     # endregion GIF
 

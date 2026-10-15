@@ -14,5 +14,13 @@ data class StripOptions(val keepColorProfile: Boolean = true,
         }
     }
 
+    // Orientation 1 is the default, so a minimal EXIF is only worth writing for the other seven.
+    fun orientationToWrite(found: Int?): Int? {
+        if (keepOrientation == false || found == null || found !in 2..8) {
+            return null
+        }
+        return found
+    }
+
     // endregion Methods
 }

@@ -7,8 +7,12 @@ object JpegTestData {
 
     // region State
 
-    val fixtureNames =
-        listOf("jpeg-camera.jpg", "jpeg-clean.jpg", "jpeg-cmyk.jpg", "jpeg-motion-photo.jpg", "jpeg-progressive.jpg")
+    val fixtureNames = listOf("jpeg-camera.jpg",
+                              "jpeg-clean.jpg",
+                              "jpeg-cmyk.jpg",
+                              "jpeg-icc.jpg",
+                              "jpeg-motion-photo.jpg",
+                              "jpeg-progressive.jpg")
 
     // endregion State
 
