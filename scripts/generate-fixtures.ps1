@@ -2,7 +2,8 @@
 Generates the image fixtures in metadata/src/test/resources/fixtures/ for the :metadata unit
 tests. The output is committed, so tests don't need these tools installed.
 
-Requires ImageMagick 7 (`magick`, with HEIC/AVIF support) and exiftool on PATH.
+Requires ImageMagick 7 (`magick`, with HEIC/AVIF support), libheif's `heif-enc` and exiftool
+on PATH.
 All metadata is fake: no fixture may contain personal data.
 
 Two things are built by hand instead: the APNG (ImageMagick's APNG writer needs ffmpeg) and
@@ -336,6 +337,15 @@ try {
     $avif = Fixture 'avif-metadata.avif'
     New-BaseImage $avif @('-quality', '60')
     Set-Metadata $avif ($cameraExif + $xmp)
+
+    <#
+    ImageMagick writes neither a thumbnail nor an ICC profile into HEIF, so this one comes from
+    libheif's heif-enc: a `thmb` thumbnail item, the PNG's ICC profile as a `colr` property,
+    and a `udes` user description, plus the same EXIF and XMP as the others.
+    #>
+    $heicThumbnail = Fixture 'heif-thumbnail-icc.heic'
+    heif-enc -q 60 -t 32 --pitm-description 'Jane Fixture in Paris' -o $heicThumbnail $pngIcc
+    Set-Metadata $heicThumbnail ($cameraExif + $xmp)
 
     # endregion HEIF
 

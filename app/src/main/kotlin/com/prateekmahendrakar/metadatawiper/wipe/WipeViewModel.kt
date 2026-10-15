@@ -6,10 +6,12 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandlerRegistry
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.bmp.BmpHandler
 import com.prateekmahendrakar.metadatawiper.metadata.gif.GifHandler
+import com.prateekmahendrakar.metadatawiper.metadata.heif.HeifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
 import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
 import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
@@ -49,6 +51,8 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                                                FormatHandlerRegistry(listOf(JpegHandler(),
                                                                             PngHandler(),
                                                                             WebPHandler(),
+                                                                            HeifHandler(FileFormat.Heif),
+                                                                            HeifHandler(FileFormat.Avif),
                                                                             GifHandler(),
                                                                             BmpHandler())))
                 WipeViewModel(useCase, tempFileStore)
