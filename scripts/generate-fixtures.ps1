@@ -330,8 +330,9 @@ try {
 
     # region HEIF
 
+    # 8-bit, so it's HEVC Main as phones write it; ImageMagick's default 12-bit Range Extensions doesn't decode on Android.
     $heic = Fixture 'heif-metadata.heic'
-    New-BaseImage $heic @('-quality', '60')
+    New-BaseImage $heic @('-depth', '8', '-quality', '60')
     Set-Metadata $heic ($cameraExif + $xmp)
 
     $avif = Fixture 'avif-metadata.avif'
