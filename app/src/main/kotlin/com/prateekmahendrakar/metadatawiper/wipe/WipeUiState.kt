@@ -8,6 +8,7 @@ data class WipeUiState(val files: List<SelectedFile> = emptyList(),
                        val canOverwrite: Boolean = true,
                        val isBusy: Boolean = false,
                        val results: List<FileWipeResult> = emptyList(),
+                       val lastAction: WipeAction? = null,
                        val pendingShare: PendingShare? = null) {
 
     // region State
@@ -17,6 +18,10 @@ data class WipeUiState(val files: List<SelectedFile> = emptyList(),
 
     val summary: WipeSummary
         get() = WipeSummary.of(results.map { it.result })
+
+    // Files with nothing to remove are shared as they are, so they count as shareable too.
+    val hasShareableResults: Boolean
+        get() = results.any { it.result is CleanedResult || it.result is NothingToRemoveResult }
 
     // endregion State
 

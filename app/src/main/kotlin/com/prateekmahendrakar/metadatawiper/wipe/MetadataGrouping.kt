@@ -19,9 +19,16 @@ object MetadataGrouping {
                                    MetadataCategory.ColorProfile,
                                    MetadataCategory.Orientation)
 
+    // The categories that most directly identify where someone was, who they are, or what they own.
+    private val highRiskCategories = setOf(MetadataCategory.Location, MetadataCategory.People, MetadataCategory.Device)
+
     // endregion State
 
     // region Methods
+
+    fun isHighRisk(category: MetadataCategory): Boolean = category in highRiskCategories
+
+    fun riskRank(category: MetadataCategory): Int = riskOrder.indexOf(category)
 
     // Structural findings come first in each group: they name the block, the tags below give its contents.
     fun of(items: List<MetadataItem>,

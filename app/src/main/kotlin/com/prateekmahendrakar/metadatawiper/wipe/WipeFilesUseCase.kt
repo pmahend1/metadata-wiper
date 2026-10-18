@@ -61,6 +61,7 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
                 SelectedFile(uri = uri,
                              displayName = displayName ?: "",
                              format = format,
+                             byteSize = input.size(),
                              inspection = inspection,
                              metadataGroups = groups)
             }
@@ -69,6 +70,7 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
             SelectedFile(uri = uri,
                          displayName = displayName ?: "",
                          format = FileFormat.Unknown,
+                         byteSize = 0,
                          inspection = null,
                          metadataGroups = emptyList())
         }

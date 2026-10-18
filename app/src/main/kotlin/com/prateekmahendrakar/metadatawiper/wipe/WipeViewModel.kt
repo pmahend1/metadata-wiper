@@ -74,27 +74,40 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
 
     fun selectShared(uris: List<Uri>) = select(uris, canOverwrite = false)
 
-    fun overwriteOriginals(settings: PrivacySettings) = wipeAll(settings) { _, _ -> OverwriteDestination }
+    fun overwriteOriginals(settings: PrivacySettings) = wipeAll(settings, WipeAction.Replaced) { _, _ -> OverwriteDestination }
 
     fun saveTo(documentUri: Uri,
-               settings: PrivacySettings) = wipeAll(settings) { _, _ -> DocumentDestination(documentUri) }
+               settings: PrivacySettings) = wipeAll(settings, WipeAction.Saved) { _, _ -> DocumentDestination(documentUri) }
 
     fun saveToFolder(treeUri: Uri,
-                     settings: PrivacySettings) = wipeAll(settings) { _, file -> FolderDestination(treeUri, outputName(file, settings)) }
+                     settings: PrivacySettings) = wipeAll(settings, WipeAction.Saved) { _, file -> FolderDestination(treeUri, outputName(file, settings)) }
 
     fun share(settings: PrivacySettings) {
         runExclusively {
-            sharedFileStore.clear()
-            val outputs = _uiState.value.files.mapIndexed { index, file -> sharedFileStore.fileFor(index, outputName(file, settings)) }
-            val results = wipeEach(settings) { index, _ -> LocalFileDestination(outputs[index]) }
-            val shared = results.zip(outputs)
-                                .filter { (wiped, _) -> wiped.result is CleanedResult || wiped.result is NothingToRemoveResult }
-            finish(results, pendingShareOf(shared))
+            val (results, pendingShare) = shareFiles(_uiState.value.files, settings)
+            finish(results, WipeAction.Shared, pendingShare)
+        }
+    }
+
+    // Cleans the originals again rather than keeping copies around; the output is the same either way.
+    fun shareCleaned(settings: PrivacySettings) {
+        runExclusively {
+            val files = _uiState.value.results.filter { it.result is CleanedResult || it.result is NothingToRemoveResult }
+                                              .map { it.file }
+            val (_, pendingShare) = shareFiles(files, settings)
+            _uiState.update { it.copy(pendingShare = pendingShare) }
         }
     }
 
     fun onShareLaunched() {
         _uiState.update { it.copy(pendingShare = null) }
+    }
+
+    fun clear() {
+        if (_uiState.value.isBusy) {
+            return
+        }
+        _uiState.update { WipeUiState() }
     }
 
     private fun select(uris: List<Uri>,
@@ -104,30 +117,43 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         }
         runExclusively {
             val files = uris.map { wipeFiles.inspect(it) }
-            _uiState.update { it.copy(files = files, canOverwrite = canOverwrite, results = emptyList()) }
+            _uiState.update { WipeUiState(files = files, canOverwrite = canOverwrite, isBusy = it.isBusy) }
         }
     }
 
     private fun wipeAll(settings: PrivacySettings,
+                        action: WipeAction,
                         destination: (Int, SelectedFile) -> WipeDestination) {
         runExclusively {
-            finish(wipeEach(settings, destination), pendingShare = null)
+            finish(wipeEach(_uiState.value.files, settings, destination), action, pendingShare = null)
         }
     }
 
-    private fun wipeEach(settings: PrivacySettings,
+    private fun shareFiles(files: List<SelectedFile>,
+                           settings: PrivacySettings): Pair<List<FileWipeResult>, PendingShare?> {
+        sharedFileStore.clear()
+        val outputs = files.mapIndexed { index, file -> sharedFileStore.fileFor(index, outputName(file, settings)) }
+        val results = wipeEach(files, settings) { index, _ -> LocalFileDestination(outputs[index]) }
+        val shared = results.zip(outputs)
+                            .filter { (wiped, _) -> wiped.result is CleanedResult || wiped.result is NothingToRemoveResult }
+        return results to pendingShareOf(shared)
+    }
+
+    private fun wipeEach(files: List<SelectedFile>,
+                         settings: PrivacySettings,
                          destination: (Int, SelectedFile) -> WipeDestination): List<FileWipeResult> {
-        return _uiState.value.files.mapIndexed { index, file ->
+        return files.mapIndexed { index, file ->
             FileWipeResult(file, wipeFiles.wipe(file.uri, destination(index, file), settings.stripOptions))
         }
     }
 
     // Failed files stay selected so the user can retry them.
     private fun finish(results: List<FileWipeResult>,
+                       action: WipeAction,
                        pendingShare: PendingShare?) {
         val failedFiles = results.filter { it.result is FailedResult }
                                  .map { it.file }
-        _uiState.update { it.copy(files = failedFiles, results = results, pendingShare = pendingShare) }
+        _uiState.update { it.copy(files = failedFiles, results = results, lastAction = action, pendingShare = pendingShare) }
     }
 
     private fun pendingShareOf(shared: List<Pair<FileWipeResult, File>>): PendingShare? {

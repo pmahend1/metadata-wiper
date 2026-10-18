@@ -2,39 +2,47 @@
     <string name="app_name"
             translatable="false">Metadata Wiper</string>
     <string name="settings">Settings</string>
-    <string name="select_images_prompt">Select one or more images to view and remove their metadata. \n(Hint: you may have to long-press an image to select multiple files)</string>
-    <string name="selected_image">Selected Image</string>
-    <string name="theme">Theme</string>
-    <string name="file_options">File Options</string>
-    <string name="overwrite_original_file">Overwrite original file</string>
-    <string name="rate_and_review">Rate and review</string>
-    <string name="close">Close</string>
-    <string name="select_images">Select Image(s)</string>
-    <string name="remove_metadata">Remove metadata</string>
+    <string name="back">Back</string>
+    <string name="selected_image">Selected image</string>
+
+    <string name="home_headline">Remove hidden details before you share</string>
+    <string name="home_body">Images can carry where they were taken, the phone that took them and when. See what\'s inside an image and remove it.</string>
+    <string name="choose_images">Choose images</string>
+    <string name="choose_several_hint">Choosing several? Long-press the first image.</string>
+    <string name="offline_promise">Works offline. Your images never leave this phone.</string>
+    <string name="share_in_hint">You can also share images here from any app.</string>
+
+    <plurals name="image_count">
+        <item quantity="one">%d image</item>
+        <item quantity="other">%d images</item>
+    </plurals>
+    <string name="file_details">%1$s · %2$s</string>
+    <plurals name="items_found">
+        <item quantity="one">%d item found</item>
+        <item quantity="other">%d items found</item>
+    </plurals>
+    <string name="clean_and_share">Clean &amp; share</string>
+    <string name="clean_and_save">Clean &amp; save</string>
+    <string name="clean_and_replace">Clean &amp; replace</string>
     <string name="no_removable_metadata">No removable metadata found.</string>
     <string name="no_metadata_found">No metadata found.</string>
     <string name="metadata_unreadable">This file\'s metadata can\'t be read: its format isn\'t supported yet, or it is damaged.</string>
-    <string name="theme_system">System</string>
-    <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark</string>
-    <string name="privacy_policy">Privacy Policy</string>
-    <string name="app_version">App Version</string>
-    <plurals name="remove_metadata_from_images">
-        <item quantity="one">Remove metadata from %d image</item>
-        <item quantity="other">Remove metadata from %d images</item>
-    </plurals>
-    <string name="metadata_wiped_successfully">Metadata wiped successfully!</string>
-    <string name="wipe_summary">Cleaned: %1$d · Nothing to remove: %2$d · Unsupported: %3$d · Failed: %4$d</string>
-    <plurals name="files_cannot_be_cleaned">
-        <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged.</item>
-        <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged.</item>
-    </plurals>
-
-    <string name="share_cleaned">Share cleaned copies</string>
-    <string name="share_chooser_title">Share cleaned files</string>
     <string name="shared_files_saved_elsewhere">Files shared from another app can\'t be overwritten, so you\'ll choose where to save the cleaned copies.</string>
+    <plurals name="files_cannot_be_cleaned">
+        <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged. It will be skipped.</item>
+        <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged. They will be skipped.</item>
+    </plurals>
+    <plurals name="images_can_be_cleaned">
+        <item quantity="one">%d image can be cleaned. It holds:</item>
+        <item quantity="other">%d images can be cleaned. They hold:</item>
+    </plurals>
+    <string name="category_count">%1$s · %2$d</string>
+    <string name="tap_to_inspect">Tap an image to see what it contains.</string>
+    <string name="legend_location">Has location</string>
+    <string name="legend_unsupported">Can\'t be cleaned</string>
+    <string name="share_chooser_title">Share cleaned files</string>
 
-    <string name="kept">Kept</string>
+    <string name="high_risk">High risk</string>
     <string name="category_location">Location</string>
     <string name="category_people">People</string>
     <string name="category_device">Device</string>
@@ -45,7 +53,82 @@
     <string name="category_other">Other</string>
     <string name="category_color_profile">Color profile</string>
     <string name="category_orientation">Orientation</string>
+    <string name="reason_location">Where the image was taken</string>
+    <string name="reason_people">Names that can identify you</string>
+    <string name="reason_device">Can link images back to your phone</string>
+    <string name="reason_date_time">When it was taken or edited</string>
+    <string name="reason_thumbnail">A small preview that can show parts you cropped out</string>
+    <string name="reason_embedded_media">Hidden videos or images inside the file</string>
+    <string name="more_title">Camera settings and more</string>
+    <plurals name="more_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="kept_title">Kept</string>
+    <string name="kept_reason">So the image still looks right. Change this in Settings.</string>
 
+    <string name="label_gps">GPS position</string>
+    <string name="label_make">Make</string>
+    <string name="label_model">Model</string>
+    <string name="label_serial_number">Serial number</string>
+    <string name="label_lens_make">Lens make</string>
+    <string name="label_lens_model">Lens model</string>
+    <string name="label_lens_serial_number">Lens serial number</string>
+    <string name="label_unique_id">Unique image ID</string>
+    <string name="label_host_computer">Computer name</string>
+    <string name="label_maker_note">Maker note</string>
+    <string name="label_camera_owner">Camera owner</string>
+    <string name="label_artist">Artist</string>
+    <string name="label_copyright">Copyright</string>
+    <string name="label_description">Description</string>
+    <string name="label_taken">Taken</string>
+    <string name="label_digitized">Digitized</string>
+    <string name="label_modified">Modified</string>
+    <string name="label_software">Software</string>
+    <string name="label_orientation">Orientation</string>
+    <string name="label_thumbnail">Thumbnail</string>
+    <string name="label_color_profile">Color profile</string>
+    <string name="label_linked_profile">Color profile file path</string>
+    <string name="label_trailer">Data after the end of the image</string>
+    <string name="label_comment">Comment</string>
+    <string name="orientation_normal">Normal</string>
+    <string name="orientation_mirrored">Mirrored</string>
+    <string name="orientation_rotated_180">Rotated 180°</string>
+    <string name="orientation_mirrored_vertically">Mirrored vertically</string>
+    <string name="orientation_mirrored_rotated_270">Mirrored, rotated 90° counter-clockwise</string>
+    <string name="orientation_rotated_90">Rotated 90° clockwise</string>
+    <string name="orientation_mirrored_rotated_90">Mirrored, rotated 90° clockwise</string>
+    <string name="orientation_rotated_270">Rotated 90° counter-clockwise</string>
+    <string name="value_present">Present</string>
+    <string name="note_gps_hidden">Android hides the exact position from this app. The location data is still removed.</string>
+    <string name="note_linked_profile">This path contains a user name. The image\'s colors don\'t depend on it.</string>
+
+    <string name="results_title">Results</string>
+    <plurals name="results_cleaned">
+        <item quantity="one">%d image cleaned</item>
+        <item quantity="other">%d images cleaned</item>
+    </plurals>
+    <string name="results_none_cleaned">Nothing was cleaned</string>
+    <plurals name="results_saved">
+        <item quantity="one">Saved as a new copy</item>
+        <item quantity="other">Saved as new copies</item>
+    </plurals>
+    <string name="results_replaced">Originals replaced</string>
+    <string name="results_shared">Sent to the share sheet</string>
+    <plurals name="results_already_clean">
+        <item quantity="one">%d already clean</item>
+        <item quantity="other">%d already clean</item>
+    </plurals>
+    <plurals name="results_skipped">
+        <item quantity="one">%d skipped</item>
+        <item quantity="other">%d skipped</item>
+    </plurals>
+    <plurals name="removed_count">
+        <item quantity="one">Removed %d item</item>
+        <item quantity="other">Removed %d items</item>
+    </plurals>
+    <string name="share">Share</string>
+    <string name="done">Done</string>
     <string name="status_cleaned">Cleaned</string>
     <string name="status_nothing_to_remove">Nothing to remove</string>
     <string name="status_unsupported">Unsupported</string>
@@ -65,11 +148,22 @@
     <string name="failure_write_failed">The cleaned copy couldn\'t be saved.</string>
     <string name="failure_unexpected">Something went wrong while cleaning this file.</string>
 
+    <string name="theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="saving">Saving</string>
+    <string name="overwrite_original_file">Overwrite original</string>
+    <string name="overwrite_original_description">Replace the image instead of saving a clean copy. Not available for images shared from another app.</string>
     <string name="privacy">Privacy</string>
     <string name="keep_color_profile">Keep color profile</string>
     <string name="keep_color_profile_description">Removing it can shift colors. Profiles rarely identify anyone.</string>
     <string name="keep_orientation">Keep orientation</string>
-    <string name="keep_orientation_description">Keeps photos the right way up.</string>
-    <string name="randomize_file_names">Randomize file names</string>
+    <string name="keep_orientation_description">Keeps images the right way up.</string>
+    <string name="randomize_file_names">Random file names</string>
     <string name="randomize_file_names_description">Names like IMG_20260912_143000 reveal when a photo was taken.</string>
+    <string name="about">About</string>
+    <string name="rate_and_review">Rate and review</string>
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="app_version">Version</string>
 </resources>
