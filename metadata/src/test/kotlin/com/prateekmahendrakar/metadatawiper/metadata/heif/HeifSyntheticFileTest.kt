@@ -37,6 +37,8 @@ class HeifSyntheticFileTest {
     private val exif = u32(6) + "Exif".toByteArray() + ByteArray(2) +
                        TiffBuilder(ByteOrder.BIG_ENDIAN).let { it.build(listOf(it.ascii(TiffTag.MAKE, "Synthetic Co"))) }
 
+    private val moov = box("moov", ByteArray(8))
+
     private val xmp = "<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF><dc:creator>Jane</dc:creator></rdf:RDF></x:xmpmeta>".toByteArray()
 
     private fun imageItem(id: Int = 1,
@@ -73,7 +75,8 @@ class HeifSyntheticFileTest {
     fun turnsUnblankableBoxesIntoFreeBoxes() {
         val builder = HeifBuilder(listOf(imageItem()))
         builder.extraMetaBoxes = listOf(box("xml ", "<doc>Jane</doc>".toByteArray()))
-        builder.trailingBoxes = listOf(box("mpvd", ByteArray(32) { 1 }), box("uuid", ByteArray(16) { 2 } + "Jane".toByteArray()))
+        // The `free` box after the removed ones isn't at the end, so nothing can be cut off.
+        builder.trailingBoxes = listOf(box("mpvd", ByteArray(32) { 1 }), box("uuid", ByteArray(16) { 2 } + "Jane".toByteArray()), moov)
         val input = builder.build()
 
         val items = harness.inspect(input).items
@@ -85,11 +88,51 @@ class HeifSyntheticFileTest {
         assertEquals(input.size, output.size)
         assertEquals(-1, output.indexOf("Jane".toByteArray()))
         val topLevel = boxes(output)
-        assertEquals(listOf("ftyp", "meta", "mdat", "free", "free"), topLevel.map { it.type })
-        for (box in topLevel.takeLast(2)) {
+        assertEquals(listOf("ftyp", "meta", "mdat", "free", "free", "moov"), topLevel.map { it.type })
+        for (box in topLevel.subList(3, 5)) {
             assertTrue(output.copyOfRange(box.headerEnd.toInt(), box.end.toInt()).all { it == 0.toByte() })
         }
         assertEquals(emptyList<MetadataItem>(), harness.inspect(output).items)
+    }
+
+    @Test
+    fun cutsOffRemovedBoxesAtTheEnd() {
+        val builder = HeifBuilder(listOf(imageItem()))
+        builder.trailingBoxes = listOf(box("free", ByteArray(8)),
+                                       box("mpvd", ByteArray(4096) { 1 }),
+                                       box("skip", ByteArray(4)),
+                                       box("uuid", ByteArray(16) { 2 } + "Jane".toByteArray()))
+        val input = builder.build()
+        val mediaDataEnd = boxes(input).single { it.type == "mdat" }.end.toInt()
+
+        val (output, report) = harness.strip(input)
+        assertArrayEquals(input.copyOf(mediaDataEnd), output)
+        assertEquals(listOf("ftyp", "meta", "mdat"), boxes(output).map { it.type })
+        harness.assertHas(report.removed, MetadataCategory.EmbeddedMedia, "Motion photo video")
+        harness.assertHas(report.removed, MetadataCategory.Other, "Unknown box", "uuid")
+        assertEquals(emptyList<MetadataItem>(), harness.inspect(output).items)
+        assertArrayEquals(output, harness.strip(output).first)
+    }
+
+    @Test
+    fun keepsTrailingBoxesInPlaceWhenSomethingCanPointIntoThem() {
+        val motionPhoto = box("mpvd", ByteArray(32) { 1 })
+        // mdat holds the first image; the second points past mpvd's 40 bytes and the free box's 8-byte header.
+        val imageInTail = HeifBuilder(listOf(imageItem(1), HeifTestItem(2, "hvc1", image, mediaOffset = image.size + 48L)))
+        imageInTail.trailingBoxes = listOf(motionPhoto, box("free", image))
+        val unlocatedImage = HeifBuilder(listOf(imageItem(1), HeifTestItem(2, "hvc1", image, mediaOffset = 1_000_000)))
+        unlocatedImage.trailingBoxes = listOf(motionPhoto)
+        val sequence = HeifBuilder(listOf(imageItem()))
+        sequence.trailingBoxes = listOf(moov, motionPhoto)
+
+        val cases = mapOf("image data in tail" to imageInTail, "unlocated image data" to unlocatedImage, "moov" to sequence)
+        for ((name, builder) in cases) {
+            val input = builder.build()
+            val output = harness.strip(input).first
+            assertEquals(name, input.size, output.size)
+            assertTrue(name, boxes(output).any { it.type == "free" })
+            assertEquals(name, -1, output.indexOf(ByteArray(32) { 1 }))
+        }
     }
 
     @Test

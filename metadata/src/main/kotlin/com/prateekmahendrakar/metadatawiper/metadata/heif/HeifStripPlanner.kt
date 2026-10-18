@@ -16,7 +16,8 @@ import java.nio.ByteOrder
 /*
  * Works out what a HEIF or AVIF file holds and which bytes a strip overwrites. Nothing moves:
  * metadata payloads are blanked where they are, and boxes that can't be blanked meaningfully
- * become `free` boxes of the same size, so every `iloc` offset stays valid.
+ * become `free` boxes of the same size, so every `iloc` offset stays valid. The one exception
+ * is the end of the file, where removed boxes can be cut off (see outputLength).
  *
  * Image items and the properties needed to render them are kept. Anything kept that can carry
  * identifying data but can't be removed safely is named in a warning rather than reported as
@@ -33,6 +34,9 @@ class HeifStripPlanner(private val reader: BinaryReader,
     private val warnings = linkedSetOf<String>()
     private val blanked = mutableListOf<BlankedRange>()
     private val imageData = mutableListOf<FileSpan>()
+    private val removedTopLevel = mutableSetOf<Box>()
+    private var hasMovie = false
+    private var hasUnlocatedImageData = false
 
     private val keptTopLevelTypes = setOf(FTYP, META, MDAT, FREE, SKIP)
 
@@ -117,7 +121,10 @@ class HeifStripPlanner(private val reader: BinaryReader,
         planItems(meta, mediaData)
         planProperties(meta)
         planReferences(meta)
-        return HeifStripPlan(items.toList(), warnings.toList(), checkedBlanked())
+
+        val blankedRanges = checkedBlanked()
+        val outputLength = outputLength(topLevel)
+        return HeifStripPlan(items.toList(), warnings.toList(), blankedRanges.filter { it.span.start < outputLength }, outputLength)
     }
 
     private fun metaBox(topLevel: List<Box>): Box {
@@ -137,9 +144,12 @@ class HeifStripPlanner(private val reader: BinaryReader,
         for (box in topLevel) {
             when (box.type) {
                 in keptTopLevelTypes -> continue
-                MOOV -> warnings += SEQUENCE_WARNING
-                MOTION_PHOTO_VIDEO -> removeBox(box, MetadataCategory.EmbeddedMedia, "Motion photo video")
-                else -> removeBox(box, MetadataCategory.Other, "Unknown box", box.type)
+                MOOV -> {
+                    hasMovie = true
+                    warnings += SEQUENCE_WARNING
+                }
+                MOTION_PHOTO_VIDEO -> removeTopLevelBox(box, MetadataCategory.EmbeddedMedia, "Motion photo video")
+                else -> removeTopLevelBox(box, MetadataCategory.Other, "Unknown box", box.type)
             }
         }
     }
@@ -156,6 +166,14 @@ class HeifStripPlanner(private val reader: BinaryReader,
         if (unknownTypes.isNotEmpty()) {
             warnings += "Boxes this app doesn't recognise (${unknownTypes.joinToString()}) were left in place."
         }
+    }
+
+    private fun removeTopLevelBox(box: Box,
+                                  category: MetadataCategory,
+                                  label: String,
+                                  detail: String = "") {
+        removeBox(box, category, label, detail)
+        removedTopLevel += box
     }
 
     private fun removeBox(box: Box,
@@ -318,7 +336,11 @@ class HeifStripPlanner(private val reader: BinaryReader,
             ItemLocation.IDAT_OFFSET -> meta.idat?.let { FileSpan(it.dataStart, it.end) } ?: return emptyList()
             else -> return emptyList()
         }
-        return resolve(location, container) ?: emptyList()
+        val spans = resolve(location, container)
+        if (spans == null) {
+            hasUnlocatedImageData = true
+        }
+        return spans ?: emptyList()
     }
 
     // Null when an extent falls outside [container]. Written to avoid overflow with 64-bit offsets.
@@ -422,6 +444,32 @@ class HeifStripPlanner(private val reader: BinaryReader,
             }
         }
         return sorted
+    }
+
+    /*
+     * Removed top-level boxes at the very end of the file, with any `free`/`skip` padding among
+     * them, are cut off instead of kept as zeroed `free` boxes, since a Motion Photo video can be
+     * several megabytes. That's only safe when nothing points past the cut: a `moov` sample table
+     * can point anywhere, and so can image data that couldn't be located.
+     */
+    private fun outputLength(topLevel: List<Box>): Long {
+        if (hasMovie || hasUnlocatedImageData) {
+            return reader.size
+        }
+        var cut = reader.size
+        var cutsRemovedBox = false
+        for (box in topLevel.asReversed()) {
+            when {
+                box in removedTopLevel -> cutsRemovedBox = true
+                box.type == FREE || box.type == SKIP -> Unit
+                else -> break
+            }
+            cut = box.start
+        }
+        if (cutsRemovedBox == false || imageData.any { it.end > cut }) {
+            return reader.size
+        }
+        return cut
     }
 
     // endregion Methods

@@ -5,7 +5,7 @@ enum class FileFormat(val mimeType: String,
     Jpeg("image/jpeg", "jpg"),
     Png("image/png", "png"),
     WebP("image/webp", "webp"),
-    Heif("image/heif", "heic"),
+    Heif("image/heic", "heic"),     // must match the extension, or SAF providers append ".heif" to the name
     Avif("image/avif", "avif"),
     Gif("image/gif", "gif"),
     Bmp("image/bmp", "bmp"),
