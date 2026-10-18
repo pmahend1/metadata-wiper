@@ -10,9 +10,9 @@ import java.io.OutputStream
 import java.nio.channels.SeekableByteChannel
 
 /*
- * Strips HEIF/HEIC and AVIF, which share the same container. The output is the same size as
- * the input and differs only in the blanked metadata bytes, so no `iloc` offset has to move.
- * See HeifStripPlanner for what is blanked and what is kept.
+ * Strips HEIF/HEIC and AVIF, which share the same container. The output differs from the input
+ * only in the blanked metadata bytes, so no `iloc` offset has to move, except that removed boxes
+ * at the end can be cut off. See HeifStripPlanner for what is blanked, cut and kept.
  */
 class HeifHandler(override val format: FileFormat) : FormatHandler {
 
@@ -40,7 +40,7 @@ class HeifHandler(override val format: FileFormat) : FormatHandler {
             range.writeTo(output)
             position = range.span.end
         }
-        reader.copyTo(output, position, reader.size)
+        reader.copyTo(output, position, plan.outputLength)
 
         // Orientation lives in the kept `irot`/`imir` properties, so no EXIF orientation is ever written.
         return StripReport.of(plan.items, plan.warnings, options, orientationWritten = false)
