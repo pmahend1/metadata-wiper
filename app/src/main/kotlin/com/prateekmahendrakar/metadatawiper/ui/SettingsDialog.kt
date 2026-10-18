@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.prateekmahendrakar.metadatawiper.R
+import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.model.Theme
 
 @Composable
@@ -42,15 +45,20 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
     currentOverwriteOriginal: Boolean,
     onOverwriteOriginalChange: (Boolean) -> Unit,
+    privacy: PrivacySettings,
+    onKeepColorProfileChange: (Boolean) -> Unit,
+    onKeepOrientationChange: (Boolean) -> Unit,
+    onRandomizeFileNamesChange: (Boolean) -> Unit,
     appVersion: String
 ) {
     var tempTheme by remember { mutableStateOf(currentTheme) }
-    var tempOverwrite by remember { mutableStateOf(currentOverwriteOriginal) }
     val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
         Card {
-            Column(modifier = Modifier.padding(16.dp),
+            Column(modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
                    horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(stringResource(id = R.string.settings),
                      style = MaterialTheme.typography.headlineSmall,
@@ -103,9 +111,31 @@ fun SettingsDialog(
                         horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(stringResource(id = R.string.overwrite_original_file),
                              style = MaterialTheme.typography.bodyLarge)
-                        Switch(checked = tempOverwrite,
-                               onCheckedChange = { tempOverwrite = it })
+                        Switch(checked = currentOverwriteOriginal,
+                               onCheckedChange = onOverwriteOriginalChange)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(id = R.string.privacy),
+                         style = MaterialTheme.typography.titleMedium,
+                         modifier = Modifier.padding(bottom = 8.dp))
+                    SettingSwitch(title = stringResource(id = R.string.keep_color_profile),
+                                  description = stringResource(id = R.string.keep_color_profile_description),
+                                  checked = privacy.keepColorProfile,
+                                  onCheckedChange = onKeepColorProfileChange)
+                    SettingSwitch(title = stringResource(id = R.string.keep_orientation),
+                                  description = stringResource(id = R.string.keep_orientation_description),
+                                  checked = privacy.keepOrientation,
+                                  onCheckedChange = onKeepOrientationChange)
+                    SettingSwitch(title = stringResource(id = R.string.randomize_file_names),
+                                  description = stringResource(id = R.string.randomize_file_names_description),
+                                  checked = privacy.randomizeFileNames,
+                                  onCheckedChange = onRandomizeFileNamesChange)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -182,14 +212,32 @@ fun SettingsDialog(
 
 
                 // --- Close Button ---
-                Button(onClick = {
-                    onOverwriteOriginalChange(tempOverwrite)
-                    onDismiss()
-                },
+                Button(onClick = onDismiss,
                        modifier = Modifier.align(Alignment.End)) {
                     Text(stringResource(id = R.string.close))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingSwitch(title: String,
+                          description: String,
+                          checked: Boolean,
+                          onCheckedChange: (Boolean) -> Unit) {
+    Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(text = description,
+                 style = MaterialTheme.typography.bodySmall,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

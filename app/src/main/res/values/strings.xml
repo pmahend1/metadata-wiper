@@ -10,24 +10,66 @@
     <string name="rate_and_review">Rate and review</string>
     <string name="close">Close</string>
     <string name="select_images">Select Image(s)</string>
-    <string name="remove_exif_data">Remove Exif data</string>
-    <string name="no_removable_exif_data">No removable EXIF data found.</string>
-    <string name="no_exif_data_found">No EXIF data found in the selected image.</string>
-    <string name="tag">Tag</string>
+    <string name="remove_metadata">Remove metadata</string>
+    <string name="no_removable_metadata">No removable metadata found.</string>
+    <string name="no_metadata_found">No metadata found.</string>
+    <string name="metadata_unreadable">This file\'s metadata can\'t be read: its format isn\'t supported yet, or it is damaged.</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="app_version">App Version</string>
-    <plurals name="remove_exif_from_images">
-        <item quantity="one">Remove Exif from %d image</item>
-        <item quantity="other">Remove Exif from %d images</item>
+    <plurals name="remove_metadata_from_images">
+        <item quantity="one">Remove metadata from %d image</item>
+        <item quantity="other">Remove metadata from %d images</item>
     </plurals>
-    <string name="value_with_count">Value(%d)</string>
     <string name="metadata_wiped_successfully">Metadata wiped successfully!</string>
     <string name="wipe_summary">Cleaned: %1$d · Nothing to remove: %2$d · Unsupported: %3$d · Failed: %4$d</string>
     <plurals name="files_cannot_be_cleaned">
         <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged.</item>
         <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged.</item>
     </plurals>
+
+    <string name="share_cleaned">Share cleaned copies</string>
+    <string name="share_chooser_title">Share cleaned files</string>
+    <string name="shared_files_saved_elsewhere">Files shared from another app can\'t be overwritten, so you\'ll choose where to save the cleaned copies.</string>
+
+    <string name="kept">Kept</string>
+    <string name="category_location">Location</string>
+    <string name="category_people">People</string>
+    <string name="category_device">Device</string>
+    <string name="category_date_time">Date and time</string>
+    <string name="category_software">Software</string>
+    <string name="category_thumbnail">Thumbnail</string>
+    <string name="category_embedded_media">Embedded media</string>
+    <string name="category_other">Other</string>
+    <string name="category_color_profile">Color profile</string>
+    <string name="category_orientation">Orientation</string>
+
+    <string name="status_cleaned">Cleaned</string>
+    <string name="status_nothing_to_remove">Nothing to remove</string>
+    <string name="status_unsupported">Unsupported</string>
+    <string name="status_failed">Failed</string>
+    <string name="report_removed">Removed</string>
+    <string name="report_kept">Kept</string>
+    <string name="report_warnings">Warnings</string>
+    <string name="nothing_to_remove_detail">This file has no metadata that needs removing, so it was left unchanged.</string>
+    <string name="unsupported_format">This file type isn\'t supported yet (%s).</string>
+    <string name="unknown_format">This file type isn\'t recognized.</string>
+    <string name="decode_check_skipped">This device can\'t decode the format, so the cleaned image wasn\'t test-decoded.</string>
+    <string name="failure_unreadable">The file couldn\'t be read.</string>
+    <string name="failure_malformed">The file is damaged or isn\'t a valid image.</string>
+    <string name="failure_metadata_remained">Some metadata couldn\'t be removed, so no cleaned copy was saved.</string>
+    <string name="failure_invalid_output">The cleaned copy failed verification, so it wasn\'t saved.</string>
+    <string name="failure_decode_failed">The cleaned copy didn\'t open as an image, so it wasn\'t saved.</string>
+    <string name="failure_write_failed">The cleaned copy couldn\'t be saved.</string>
+    <string name="failure_unexpected">Something went wrong while cleaning this file.</string>
+
+    <string name="privacy">Privacy</string>
+    <string name="keep_color_profile">Keep color profile</string>
+    <string name="keep_color_profile_description">Removing it can shift colors. Profiles rarely identify anyone.</string>
+    <string name="keep_orientation">Keep orientation</string>
+    <string name="keep_orientation_description">Keeps photos the right way up.</string>
+    <string name="randomize_file_names">Randomize file names</string>
+    <string name="randomize_file_names_description">Names like IMG_20260912_143000 reveal when a photo was taken.</string>
 </resources>

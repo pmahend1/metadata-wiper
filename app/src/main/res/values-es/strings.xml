@@ -8,21 +8,20 @@
     <string name="rate_and_review">Calificar y opinar</string>
     <string name="close">Cerrar</string>
     <string name="select_images">Seleccionar Imagen(es)</string>
-    <string name="remove_exif_data">Eliminar datos Exif</string>
-    <string name="no_removable_exif_data">No se encontraron datos Exif eliminables.</string>
-    <string name="no_exif_data_found">No se encontraron datos Exif en la imagen seleccionada.</string>
-    <string name="tag">Etiqueta</string>
+    <string name="remove_metadata">Eliminar metadatos</string>
+    <string name="no_removable_metadata">No se encontraron metadatos eliminables.</string>
+    <string name="no_metadata_found">No se encontraron metadatos.</string>
+    <string name="metadata_unreadable">No se pueden leer los metadatos de este archivo: su formato aún no es compatible o está dañado.</string>
     <string name="theme_system">Sistema</string>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Oscuro</string>
     <string name="privacy_policy">Política de Privacidad</string>
     <string name="app_version">Versión de la App</string>
-    <plurals name="remove_exif_from_images">
-        <item quantity="one">Eliminar Exif de %d imagen</item>
-        <item quantity="other">Eliminar Exif de %d imágenes</item>
-        <item quantity="many">Eliminar Exif de %d imágenes</item>
+    <plurals name="remove_metadata_from_images">
+        <item quantity="one">Eliminar metadatos de %d imagen</item>
+        <item quantity="many">Eliminar metadatos de %d imágenes</item>
+        <item quantity="other">Eliminar metadatos de %d imágenes</item>
     </plurals>
-    <string name="value_with_count">Valor(%d)</string>
     <string name="metadata_wiped_successfully">¡Metadatos eliminados con éxito!</string>
     <string name="wipe_summary">Limpiados: %1$d · Sin nada que eliminar: %2$d · No compatibles: %3$d · Con errores: %4$d</string>
     <plurals name="files_cannot_be_cleaned">
@@ -30,4 +29,47 @@
         <item quantity="many">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados.</item>
         <item quantity="other">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados.</item>
     </plurals>
+
+    <string name="share_cleaned">Compartir copias limpias</string>
+    <string name="share_chooser_title">Compartir archivos limpios</string>
+    <string name="shared_files_saved_elsewhere">Los archivos compartidos desde otra app no se pueden sobrescribir, así que elegirás dónde guardar las copias limpias.</string>
+
+    <string name="kept">Se conserva</string>
+    <string name="category_location">Ubicación</string>
+    <string name="category_people">Personas</string>
+    <string name="category_device">Dispositivo</string>
+    <string name="category_date_time">Fecha y hora</string>
+    <string name="category_software">Software</string>
+    <string name="category_thumbnail">Miniatura</string>
+    <string name="category_embedded_media">Contenido incrustado</string>
+    <string name="category_other">Otros</string>
+    <string name="category_color_profile">Perfil de color</string>
+    <string name="category_orientation">Orientación</string>
+
+    <string name="status_cleaned">Limpiado</string>
+    <string name="status_nothing_to_remove">Nada que eliminar</string>
+    <string name="status_unsupported">No compatible</string>
+    <string name="status_failed">Error</string>
+    <string name="report_removed">Eliminado</string>
+    <string name="report_kept">Conservado</string>
+    <string name="report_warnings">Avisos</string>
+    <string name="nothing_to_remove_detail">Este archivo no tiene metadatos que haya que eliminar, así que no se ha modificado.</string>
+    <string name="unsupported_format">Este tipo de archivo aún no es compatible (%s).</string>
+    <string name="unknown_format">No se reconoce este tipo de archivo.</string>
+    <string name="decode_check_skipped">Este dispositivo no puede decodificar el formato, así que no se ha comprobado que la imagen limpia se abra correctamente.</string>
+    <string name="failure_unreadable">No se pudo leer el archivo.</string>
+    <string name="failure_malformed">El archivo está dañado o no es una imagen válida.</string>
+    <string name="failure_metadata_remained">No se pudieron eliminar algunos metadatos, así que no se guardó ninguna copia limpia.</string>
+    <string name="failure_invalid_output">La copia limpia no superó la verificación, así que no se guardó.</string>
+    <string name="failure_decode_failed">La copia limpia no se abría como imagen, así que no se guardó.</string>
+    <string name="failure_write_failed">No se pudo guardar la copia limpia.</string>
+    <string name="failure_unexpected">Algo salió mal al limpiar este archivo.</string>
+
+    <string name="privacy">Privacidad</string>
+    <string name="keep_color_profile">Conservar perfil de color</string>
+    <string name="keep_color_profile_description">Quitarlo puede alterar los colores. Los perfiles casi nunca identifican a nadie.</string>
+    <string name="keep_orientation">Conservar orientación</string>
+    <string name="keep_orientation_description">Mantiene las fotos con la orientación correcta.</string>
+    <string name="randomize_file_names">Nombres de archivo aleatorios</string>
+    <string name="randomize_file_names_description">Nombres como IMG_20260912_143000 revelan cuándo se tomó una foto.</string>
 </resources>

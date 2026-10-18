@@ -1,27 +1,21 @@
 package com.prateekmahendrakar.metadatawiper
 
+import android.content.Intent
 import android.content.pm.PackageInfo
-import android.widget.Toast
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,10 +46,13 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.model.Theme
 import com.prateekmahendrakar.metadatawiper.ui.ActionButtons
-import com.prateekmahendrakar.metadatawiper.ui.ImageMetadataDialog
-import com.prateekmahendrakar.metadatawiper.ui.MetadataTable
+import com.prateekmahendrakar.metadatawiper.share.ShareIntents
+import com.prateekmahendrakar.metadatawiper.ui.MetadataGroups
+import com.prateekmahendrakar.metadatawiper.ui.ResultsList
+import com.prateekmahendrakar.metadatawiper.ui.SelectionGrid
 import com.prateekmahendrakar.metadatawiper.ui.SettingsDialog
 import com.prateekmahendrakar.metadatawiper.ui.theme.MetaDataWiperTheme
+import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.viewmodel.SettingsViewModel
 import com.prateekmahendrakar.metadatawiper.wipe.WipeUiState
 import com.prateekmahendrakar.metadatawiper.wipe.WipeViewModel
@@ -69,10 +66,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         installSplashScreen()
 
+        // A recreated activity (rotation, process restore) gets the same intent back; it was already handled.
+        if (savedInstanceState == null) {
+            selectSharedFiles(intent)
+        }
+
         enableEdgeToEdge()
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
             val overwriteOriginal by settingsViewModel.overwriteOriginal.collectAsState()
+            val privacy by settingsViewModel.privacy.collectAsState()
             val wipeState by wipeViewModel.uiState.collectAsState()
             val useDarkTheme = when (theme) {
                 Theme.System -> isSystemInDarkTheme()
@@ -87,16 +90,12 @@ class MainActivity : ComponentActivity() {
                 val versionName = packageInfo.versionName
 
                 val context = LocalContext.current
-                val summary = wipeState.summary
-                val wipedSuccessfully = stringResource(id = R.string.metadata_wiped_successfully)
-                val summaryText = summary?.let {
-                    stringResource(id = R.string.wipe_summary, it.cleaned, it.nothingToRemove, it.unsupported, it.failed)
-                }
-                LaunchedEffect(summary) {
-                    if (summary != null) {
-                        val message = if (summary.isCompleteSuccess) wipedSuccessfully else summaryText
-                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        wipeViewModel.onSummaryShown()
+                val pendingShare = wipeState.pendingShare
+                val shareTitle = stringResource(id = R.string.share_chooser_title)
+                LaunchedEffect(pendingShare) {
+                    if (pendingShare != null) {
+                        context.startActivity(ShareIntents.chooserFor(pendingShare, shareTitle))
+                        wipeViewModel.onShareLaunched()
                     }
                 }
 
@@ -106,6 +105,10 @@ class MainActivity : ComponentActivity() {
                                    onDismiss = { showSettingsDialog = false },
                                    currentOverwriteOriginal = overwriteOriginal,
                                    onOverwriteOriginalChange = { settingsViewModel.setOverwriteOriginal(it) },
+                                   privacy = privacy,
+                                   onKeepColorProfileChange = { settingsViewModel.setKeepColorProfile(it) },
+                                   onKeepOrientationChange = { settingsViewModel.setKeepOrientation(it) },
+                                   onRandomizeFileNamesChange = { settingsViewModel.setRandomizeFileNames(it) },
                                    appVersion = versionName ?: "")
                 }
 
@@ -126,16 +129,22 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(24.dp))
 
                         ActionButtons(state = wipeState,
+                                      settings = privacy,
                                       overwriteOriginal = overwriteOriginal,
                                       onFilesSelected = { wipeViewModel.select(it) },
-                                      onOverwrite = { wipeViewModel.overwriteOriginals() },
-                                      onSaveTo = { wipeViewModel.saveTo(it) },
-                                      onSaveToFolder = { wipeViewModel.saveToFolder(it) })
+                                      onOverwrite = { wipeViewModel.overwriteOriginals(privacy) },
+                                      onSaveTo = { wipeViewModel.saveTo(it, privacy) },
+                                      onSaveToFolder = { wipeViewModel.saveToFolder(it, privacy) },
+                                      onShare = { wipeViewModel.share(privacy) })
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val selectedFiles = wipeState.files
-                        if (selectedFiles.size == 1) {
+                        if (wipeState.results.isNotEmpty()) {
+                            ResultsList(results = wipeState.results,
+                                        summary = wipeState.summary,
+                                        modifier = Modifier.fillMaxSize())
+                        } else if (selectedFiles.size == 1) {
                             Column(modifier = Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Image(painter = rememberAsyncImagePainter(selectedFiles.first().uri),
                                       contentDescription = stringResource(id = R.string.selected_image),
@@ -147,34 +156,12 @@ class MainActivity : ComponentActivity() {
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(selectedFiles.first().displayName, style = MaterialTheme.typography.titleMedium)
                                 Spacer(modifier = Modifier.height(12.dp))
-                                MetadataTable(metadata = selectedFiles.first().exifDetails, modifier = Modifier.padding(horizontal = 8.dp))
+                                MetadataGroups(file = selectedFiles.first(),
+                                               options = privacy.stripOptions,
+                                               modifier = Modifier.padding(horizontal = 8.dp))
                             }
                         } else if (selectedFiles.size > 1) {
-                            LazyVerticalGrid(columns = GridCells.Fixed(3),
-                                             modifier = Modifier
-                                                 .fillMaxSize()
-                                                 .padding(horizontal = 4.dp),
-                                             horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(selectedFiles) { file ->
-                                    var isImageMetadataModalVisible by remember { mutableStateOf(false) }
-
-                                    Image(painter = rememberAsyncImagePainter(file.uri),
-                                          contentDescription = stringResource(id = R.string.selected_image),
-                                          contentScale = ContentScale.Fit,
-                                          modifier = Modifier
-                                              .aspectRatio(1f)
-                                              .clickable {
-                                                  isImageMetadataModalVisible = !isImageMetadataModalVisible
-                                              })
-                                    if (isImageMetadataModalVisible) {
-                                        ImageMetadataDialog(file) {
-                                            isImageMetadataModalVisible = false
-                                        }
-
-                                    }
-                                }
-                            }
+                            SelectionGrid(files = selectedFiles, privacy = privacy)
                         } else {
                             Text(text = stringResource(id = R.string.select_images_prompt),
                                  style = MaterialTheme.typography.bodyLarge,
@@ -185,6 +172,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        selectSharedFiles(intent)
+    }
+
+    private fun selectSharedFiles(intent: Intent) {
+        val uris = ShareIntents.urisFrom(intent)
+        if (uris.isNotEmpty()) {
+            wipeViewModel.selectShared(uris)
         }
     }
 }
@@ -222,11 +221,13 @@ fun MainScreenPreview() {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 ActionButtons(state = WipeUiState(),
+                              settings = PrivacySettings(),
                               overwriteOriginal = false,
                               onFilesSelected = {},
                               onOverwrite = {},
                               onSaveTo = {},
-                              onSaveToFolder = {})
+                              onSaveToFolder = {},
+                              onShare = {})
 
                 Spacer(modifier = Modifier.height(16.dp))
 

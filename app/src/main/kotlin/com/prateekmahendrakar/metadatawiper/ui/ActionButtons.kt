@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,18 +22,22 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prateekmahendrakar.metadatawiper.R
+import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.wipe.CleanedFileName
 import com.prateekmahendrakar.metadatawiper.wipe.WipeUiState
 
 @Composable
 fun ActionButtons(state: WipeUiState,
+                  settings: PrivacySettings,
                   overwriteOriginal: Boolean,
                   onFilesSelected: (List<Uri>) -> Unit,
                   onOverwrite: () -> Unit,
                   onSaveTo: (Uri) -> Unit,
-                  onSaveToFolder: (Uri) -> Unit) {
+                  onSaveToFolder: (Uri) -> Unit,
+                  onShare: () -> Unit) {
     val files = state.files
     val firstFile = files.firstOrNull()
+    val hasRemovableMetadata = state.hasRemovableMetadata(settings.stripOptions)
 
     val openFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(),
                                                               onResult = onFilesSelected)
@@ -55,25 +60,43 @@ fun ActionButtons(state: WipeUiState,
             LinearProgressIndicator(modifier = Modifier.padding(horizontal = 32.dp))
             Spacer(modifier = Modifier.padding(8.dp))
         }
-        if (state.hasRemovableMetadata) {
+        if (hasRemovableMetadata) {
             Button(shape = MaterialTheme.shapes.large,
                    enabled = state.isBusy == false,
                    onClick = {
                        when {
-                           overwriteOriginal -> onOverwrite()
-                           files.size == 1 && firstFile != null -> saveFileLauncher.launch(CleanedFileName.of(firstFile.displayName, firstFile.format))
+                           overwriteOriginal && state.canOverwrite -> onOverwrite()
+                           files.size == 1 && firstFile != null -> saveFileLauncher.launch(CleanedFileName.forOutput(firstFile.displayName,
+                                                                                                                       firstFile.format,
+                                                                                                                       settings.randomizeFileNames))
                            else -> saveToFolderLauncher.launch(null)
                        }
                    }) {
                 val buttonText = if (files.size > 1) {
-                    pluralStringResource(id = R.plurals.remove_exif_from_images, count = files.size, files.size)
+                    pluralStringResource(id = R.plurals.remove_metadata_from_images, count = files.size, files.size)
                 } else {
-                    stringResource(id = R.string.remove_exif_data)
+                    stringResource(id = R.string.remove_metadata)
                 }
                 Text(text = buttonText, style = MaterialTheme.typography.titleLarge)
             }
+            if (overwriteOriginal && state.canOverwrite == false) {
+                Text(text = stringResource(id = R.string.shared_files_saved_elsewhere),
+                     style = MaterialTheme.typography.bodySmall,
+                     textAlign = TextAlign.Center,
+                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            }
         } else if (files.isNotEmpty() && state.uncleanableCount == 0) {
-            Text(stringResource(id = R.string.no_removable_exif_data))
+            Text(stringResource(id = R.string.no_removable_metadata))
+        }
+
+        // Files with nothing to remove are shared as they are, so sharing is offered for them too.
+        if (files.any { it.canBeCleaned }) {
+            Spacer(modifier = Modifier.padding(4.dp))
+            OutlinedButton(shape = MaterialTheme.shapes.large,
+                           enabled = state.isBusy == false,
+                           onClick = onShare) {
+                Text(text = stringResource(id = R.string.share_cleaned))
+            }
         }
 
         // Never let an unsupported or damaged file look as though it will be cleaned.

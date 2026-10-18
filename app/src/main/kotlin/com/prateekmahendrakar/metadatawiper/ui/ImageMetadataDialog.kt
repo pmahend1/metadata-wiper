@@ -15,21 +15,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ImageMetadataDialog(file: SelectedFile, onDismissRequest: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = { onDismissRequest() }) {
-        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+fun ImageMetadataDialog(file: SelectedFile,
+                        options: StripOptions,
+                        onDismissRequest: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        Column(modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 16.dp)) {
             Text(file.displayName,
                  modifier = Modifier.fillMaxWidth(),
                  style = MaterialTheme.typography.titleSmall,
                  textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
-            MetadataTable(metadata = file.exifDetails, modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp))
+            MetadataGroups(file = file,
+                           options = options,
+                           modifier = Modifier.padding(horizontal = 12.dp))
         }
     }
 }
