@@ -3,6 +3,9 @@ package com.prateekmahendrakar.metadatawiper.metadata.heif
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarningKind
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BlankedRange
@@ -31,7 +34,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
     private val boxReader = BoxReader(reader)
 
     private val items = mutableListOf<MetadataItem>()
-    private val warnings = linkedSetOf<String>()
+    private val warnings = linkedSetOf<MetadataWarning>()
     private val blanked = mutableListOf<BlankedRange>()
     private val imageData = mutableListOf<FileSpan>()
     private val removedTopLevel = mutableSetOf<Box>()
@@ -53,20 +56,20 @@ class HeifStripPlanner(private val reader: BinaryReader,
                                                 "oinf", "elng", FREE, SKIP)
 
     // Full-box properties whose fields are all text or times, so zeroing them leaves an empty but valid property.
-    private val descriptivePropertyItems = mapOf("udes" to (MetadataCategory.Other to "Image description"),
-                                                 "altt" to (MetadataCategory.Other to "Alternative text"),
-                                                 "crtt" to (MetadataCategory.DateTime to "Creation time"),
-                                                 "mdft" to (MetadataCategory.DateTime to "Modification time"),
-                                                 "itai" to (MetadataCategory.DateTime to "Timestamp"))
+    private val descriptivePropertyItems = mapOf("udes" to (MetadataCategory.Other to MetadataLabel.IMAGE_DESCRIPTION_PROPERTY),
+                                                 "altt" to (MetadataCategory.Other to MetadataLabel.ALTERNATIVE_TEXT),
+                                                 "crtt" to (MetadataCategory.DateTime to MetadataLabel.CREATION_TIME),
+                                                 "mdft" to (MetadataCategory.DateTime to MetadataLabel.MODIFICATION_TIME),
+                                                 "itai" to (MetadataCategory.DateTime to MetadataLabel.TIMESTAMP))
 
     private val iccColourTypes = setOf("prof", "rICC")
 
     private val alphaAuxiliaryTypes = setOf("urn:mpeg:mpegB:cicp:systems:auxiliary:alpha", "urn:mpeg:hevc:2015:auxid:1")
 
     companion object {
-        const val THUMBNAIL_WARNING = "The preview thumbnail was kept, because removing it can stop the image from opening."
-        const val AUXILIARY_WARNING = "Auxiliary images, such as a depth map or HDR gain map, were kept."
-        const val SEQUENCE_WARNING = "This is an image sequence. Its track timestamps can't be removed yet and were kept."
+        val THUMBNAIL_WARNING = MetadataWarning(MetadataWarningKind.ThumbnailKept)
+        val AUXILIARY_WARNING = MetadataWarning(MetadataWarningKind.AuxiliaryImagesKept)
+        val SEQUENCE_WARNING = MetadataWarning(MetadataWarningKind.SequenceTimestampsKept)
 
         private const val FTYP = "ftyp"
         private const val META = "meta"
@@ -148,8 +151,8 @@ class HeifStripPlanner(private val reader: BinaryReader,
                     hasMovie = true
                     warnings += SEQUENCE_WARNING
                 }
-                MOTION_PHOTO_VIDEO -> removeTopLevelBox(box, MetadataCategory.EmbeddedMedia, "Motion photo video")
-                else -> removeTopLevelBox(box, MetadataCategory.Other, "Unknown box", box.type)
+                MOTION_PHOTO_VIDEO -> removeTopLevelBox(box, MetadataCategory.EmbeddedMedia, MetadataLabel.MOTION_PHOTO_VIDEO)
+                else -> removeTopLevelBox(box, MetadataCategory.Other, MetadataLabel.UNKNOWN_BOX, box.type)
             }
         }
     }
@@ -159,12 +162,12 @@ class HeifStripPlanner(private val reader: BinaryReader,
         for (box in meta.children) {
             when (box.type) {
                 in structuralMetaTypes -> continue
-                XML, BINARY_XML -> removeBox(box, MetadataCategory.Other, "XML metadata")
+                XML, BINARY_XML -> removeBox(box, MetadataCategory.Other, MetadataLabel.XML_METADATA)
                 else -> unknownTypes += box.type
             }
         }
         if (unknownTypes.isNotEmpty()) {
-            warnings += "Boxes this app doesn't recognise (${unknownTypes.joinToString()}) were left in place."
+            warnings += MetadataWarning(MetadataWarningKind.UnknownBoxesKept, unknownTypes.toList())
         }
     }
 
@@ -203,8 +206,8 @@ class HeifStripPlanner(private val reader: BinaryReader,
             when (item.type) {
                 EXIF -> planExif(metadataSpans(item, meta, mediaData))
                 MIME -> planMime(item, metadataSpans(item, meta, mediaData))
-                URI -> planOpaque(metadataSpans(item, meta, mediaData), MetadataCategory.Other, "Linked data")
-                REGIONS -> planOpaque(metadataSpans(item, meta, mediaData), MetadataCategory.People, "Region annotations")
+                URI -> planOpaque(metadataSpans(item, meta, mediaData), MetadataCategory.Other, MetadataLabel.LINKED_DATA)
+                REGIONS -> planOpaque(metadataSpans(item, meta, mediaData), MetadataCategory.People, MetadataLabel.REGION_ANNOTATIONS)
                 in imageItemTypes -> imageData += imageSpans(item, meta)
                 else -> {
                     unknownTypes += item.type
@@ -222,10 +225,10 @@ class HeifStripPlanner(private val reader: BinaryReader,
         }
 
         if (namedItems > 0) {
-            items += MetadataItem(MetadataCategory.Other, "Item names", namedItems.toString(), nameBytes)
+            items += MetadataItem(MetadataCategory.Other, MetadataLabel.ITEM_NAMES, namedItems.toString(), nameBytes)
         }
         if (unknownTypes.isNotEmpty()) {
-            warnings += "Items of a type this app doesn't recognise (${unknownTypes.joinToString()}) were left in place."
+            warnings += MetadataWarning(MetadataWarningKind.UnknownItemTypesKept, unknownTypes.toList())
         }
     }
 
@@ -244,7 +247,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
      */
     private fun inspectExif(spans: List<FileSpan>): List<MetadataItem> {
         val length = spans.sumOf { it.length }
-        val block = MetadataItem(MetadataCategory.Other, "EXIF block", byteSize = length)
+        val block = MetadataItem(MetadataCategory.Other, MetadataLabel.EXIF_BLOCK, byteSize = length)
         if (spans.size != 1) {
             return listOf(block)
         }
@@ -283,9 +286,9 @@ class HeifStripPlanner(private val reader: BinaryReader,
             return
         }
         items += if (isXmp) {
-            MetadataItem(MetadataCategory.Other, "XMP", byteSize = spans.sumOf { it.length })
+            MetadataItem(MetadataCategory.Other, MetadataLabel.XMP, byteSize = spans.sumOf { it.length })
         } else {
-            MetadataItem(MetadataCategory.Other, "Embedded data", item.contentType, spans.sumOf { it.length })
+            MetadataItem(MetadataCategory.Other, MetadataLabel.EMBEDDED_DATA, item.contentType, spans.sumOf { it.length })
         }
     }
 
@@ -376,7 +379,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
             }
         }
         if (unknownTypes.isNotEmpty()) {
-            warnings += "Image properties this app doesn't recognise (${unknownTypes.joinToString()}) were left in place."
+            warnings += MetadataWarning(MetadataWarningKind.UnknownPropertiesKept, unknownTypes.toList())
         }
     }
 
@@ -391,7 +394,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
             return
         }
         val box = property.box
-        items += MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = box.end - box.dataStart - TYPE_SIZE)
+        items += MetadataItem(MetadataCategory.ColorProfile, MetadataLabel.ICC_PROFILE, byteSize = box.end - box.dataStart - TYPE_SIZE)
         if (options.keepColorProfile) {
             return
         }

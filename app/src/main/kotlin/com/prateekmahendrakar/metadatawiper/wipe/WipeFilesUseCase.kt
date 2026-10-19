@@ -41,16 +41,13 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
 
         // Room for a minimal EXIF in any container: JPEG APP1 is 36 bytes, PNG eXIf 38, WebP EXIF 34.
         const val MINIMAL_EXIF_ALLOWANCE = 64L
-
-        const val DECODE_SKIPPED_WARNING = "This device can't decode the format, so the cleaned image wasn't test-decoded."
     }
 
     // endregion State
 
     // region Methods
 
-    fun inspect(uri: Uri,
-                options: StripOptions): SelectedFile {
+    fun inspect(uri: Uri): SelectedFile {
         val displayName = try {
             documentStore.displayName(uri)
         } catch (_: Exception) {
@@ -60,21 +57,22 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
             withSeekableSource(uri) { input ->
                 val format = detect(input)
                 val inspection = inspectOrNull(handlers.handlerFor(format), input)
+                val groups = MetadataGrouping.of(inspection?.items.orEmpty(), readExifDetails(format, input))
                 SelectedFile(uri = uri,
                              displayName = displayName ?: "",
                              format = format,
+                             byteSize = input.size(),
                              inspection = inspection,
-                             exifDetails = readExifDetails(format, input),
-                             hasRemovableMetadata = inspection?.items?.any { options.keeps(it) == false } == true)
+                             metadataGroups = groups)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't read a selected file: ${e.javaClass.simpleName}")
             SelectedFile(uri = uri,
                          displayName = displayName ?: "",
                          format = FileFormat.Unknown,
+                         byteSize = 0,
                          inspection = null,
-                         exifDetails = emptyMap(),
-                         hasRemovableMetadata = false)
+                         metadataGroups = emptyList())
         }
     }
 
@@ -97,7 +95,31 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
         if (destination is DocumentDestination && result !is CleanedResult) {
             documentStore.delete(destination.uri)
         }
+        if (destination is LocalFileDestination) {
+            return completeLocalFile(source, destination.file, result)
+        }
         return result
+    }
+
+    // Sharing needs every file, so one that's already clean is shared as it is.
+    private fun completeLocalFile(source: Uri,
+                                  file: File,
+                                  result: WipeResult): WipeResult {
+        if (result is CleanedResult) {
+            return result
+        }
+        if (result !is NothingToRemoveResult) {
+            file.delete()
+            return result
+        }
+        return try {
+            documentStore.copyTo(source, file)
+            result
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't copy a file to share: ${e.javaClass.simpleName}")
+            file.delete()
+            FailedResult(WipeFailure.WriteFailed)
+        }
     }
 
     private fun wipe(source: Uri,
@@ -144,7 +166,7 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
 
         return when (decodeVerifier.verify(format, input, cleaned)) {
             DecodeCheck.Passed -> CleanedResult(report)
-            DecodeCheck.Skipped -> CleanedResult(report.copy(warnings = report.warnings + DECODE_SKIPPED_WARNING))
+            DecodeCheck.Skipped -> CleanedResult(report, decodeCheckSkipped = true)
             DecodeCheck.Failed -> FailedResult(WipeFailure.DecodeFailed)
         }
     }
@@ -159,10 +181,10 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
                 OverwriteDestination -> documentStore.writeDocument(source, cleaned)
                 is DocumentDestination -> documentStore.writeDocument(destination.uri, cleaned)
                 is FolderDestination -> {
-                    val name = CleanedFileName.of(documentStore.displayName(source), format)
-                    created = documentStore.createInFolder(destination.treeUri, format.mimeType, name)
+                    created = documentStore.createInFolder(destination.treeUri, format.mimeType, destination.displayName)
                     documentStore.writeDocument(created, cleaned)
                 }
+                is LocalFileDestination -> cleaned.copyTo(destination.file, overwrite = true)
             }
             true
         } catch (e: Exception) {

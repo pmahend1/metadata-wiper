@@ -3,6 +3,9 @@ package com.prateekmahendrakar.metadatawiper.metadata.tiff
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarningKind
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 
 /*
@@ -15,7 +18,7 @@ object ExifBlockInspector {
 
     // region State
 
-    const val DAMAGED_WARNING = "An EXIF block is damaged, so its contents can't be listed. It is removed all the same."
+    val DAMAGED_WARNING = MetadataWarning(MetadataWarningKind.DamagedExif)
 
     // JPEG always uses this prefix; PNG and WebP shouldn't, but some writers add it anyway.
     private val exifIdentifier = byteArrayOf(0x45, 0x78, 0x69, 0x66, 0x00) // "Exif\0"
@@ -28,7 +31,7 @@ object ExifBlockInspector {
     fun inspect(reader: BinaryReader,
                 blockStart: Long,
                 blockLength: Long): ExifInspection {
-        val blockItem = MetadataItem(MetadataCategory.Other, "EXIF block", byteSize = blockLength)
+        val blockItem = MetadataItem(MetadataCategory.Other, MetadataLabel.EXIF_BLOCK, byteSize = blockLength)
         val tiffOffset = if (hasExifIdentifier(reader, blockStart, blockLength)) EXIF_IDENTIFIER_SIZE else 0L
         val tiffStart = blockStart + tiffOffset
         val tiffLength = blockLength - tiffOffset

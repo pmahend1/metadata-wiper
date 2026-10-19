@@ -5,6 +5,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.FormatHandler
 import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
@@ -26,12 +28,12 @@ class JpegHandler : FormatHandler {
 
     override val format = FileFormat.Jpeg
 
-    private val segmentLabels = mapOf(JpegSegmentKind.Xmp to "XMP",
-                                      JpegSegmentKind.ExtendedXmp to "Extended XMP",
-                                      JpegSegmentKind.MultiPicture to "Multi-picture index",
-                                      JpegSegmentKind.FlashPix to "FlashPix data",
-                                      JpegSegmentKind.Photoshop to "IPTC / Photoshop",
-                                      JpegSegmentKind.OtherApplication to "Application segment")
+    private val segmentLabels = mapOf(JpegSegmentKind.Xmp to MetadataLabel.XMP,
+                                      JpegSegmentKind.ExtendedXmp to MetadataLabel.EXTENDED_XMP,
+                                      JpegSegmentKind.MultiPicture to MetadataLabel.MULTI_PICTURE_INDEX,
+                                      JpegSegmentKind.FlashPix to MetadataLabel.FLASHPIX_DATA,
+                                      JpegSegmentKind.Photoshop to MetadataLabel.IPTC_PHOTOSHOP,
+                                      JpegSegmentKind.OtherApplication to MetadataLabel.APPLICATION_SEGMENT)
 
     private val copiedKinds = setOf(JpegSegmentKind.StartOfImage,
                                     JpegSegmentKind.Frame,
@@ -56,7 +58,7 @@ class JpegHandler : FormatHandler {
     override fun inspect(input: SeekableByteChannel): InspectionResult {
         val reader = BinaryReader(input)
         val segments = JpegSegmentReader(reader).read()
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         return InspectionResult(format, findItems(reader, segments, warnings), warnings)
     }
 
@@ -66,7 +68,7 @@ class JpegHandler : FormatHandler {
                        options: StripOptions): StripReport {
         val reader = BinaryReader(input)
         val segments = JpegSegmentReader(reader).read()
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         val items = findItems(reader, segments, warnings)
         val orientation = keptOrientation(reader, segments, options)
 
@@ -99,7 +101,7 @@ class JpegHandler : FormatHandler {
 
     private fun findItems(reader: BinaryReader,
                           segments: List<JpegSegment>,
-                          warnings: MutableList<String>): List<MetadataItem> {
+                          warnings: MutableList<MetadataWarning>): List<MetadataItem> {
         val items = mutableListOf<MetadataItem>()
         val iccSegments = segments.filter { it.kind == JpegSegmentKind.IccProfile }
         for (segment in segments) {
@@ -113,16 +115,16 @@ class JpegHandler : FormatHandler {
                 }
                 JpegSegmentKind.Jfif -> items += jfifThumbnailItems(reader, segment)
                 JpegSegmentKind.JfifExtension -> items += MetadataItem(MetadataCategory.Thumbnail,
-                                                                       "JFIF extension thumbnail",
+                                                                       MetadataLabel.JFIF_EXTENSION_THUMBNAIL,
                                                                        byteSize = segment.payloadLength)
                 JpegSegmentKind.Comment -> items += MetadataItem(MetadataCategory.Other,
-                                                                 "Comment",
+                                                                 MetadataLabel.COMMENT,
                                                                  readComment(reader, segment),
                                                                  segment.payloadLength)
                 // A profile is split across several APP2 segments but is one thing to the user.
                 JpegSegmentKind.IccProfile -> if (segment == iccSegments.first()) {
                     items += MetadataItem(MetadataCategory.ColorProfile,
-                                          "ICC profile",
+                                          MetadataLabel.ICC_PROFILE,
                                           byteSize = iccSegments.sumOf { it.payloadLength - ICC_CHUNK_HEADER_SIZE })
                 }
                 else -> {
@@ -137,7 +139,7 @@ class JpegHandler : FormatHandler {
 
         val trailerSize = reader.size - segments.last().end
         if (trailerSize > 0) {
-            items += MetadataItem(MetadataCategory.EmbeddedMedia, "Data after end of image", byteSize = trailerSize)
+            items += MetadataItem(MetadataCategory.EmbeddedMedia, MetadataLabel.TRAILING_DATA, byteSize = trailerSize)
         }
         return items
     }
@@ -156,7 +158,7 @@ class JpegHandler : FormatHandler {
         val header = readPayload(reader, segment, JFIF_FIXED_PAYLOAD)
         val width = header[JFIF_THUMBNAIL_WIDTH].toInt() and 0xFF
         val height = header[JFIF_THUMBNAIL_HEIGHT].toInt() and 0xFF
-        return listOf(MetadataItem(MetadataCategory.Thumbnail, "JFIF thumbnail", "${width}×$height", thumbnailSize))
+        return listOf(MetadataItem(MetadataCategory.Thumbnail, MetadataLabel.JFIF_THUMBNAIL, "${width}×$height", thumbnailSize))
     }
 
     // Density and version stay; the thumbnail dimensions are zeroed and its pixels dropped.

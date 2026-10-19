@@ -3,6 +3,7 @@ package com.prateekmahendrakar.metadatawiper.metadata.tiff
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 import java.nio.ByteOrder
 import java.util.Locale
@@ -21,22 +22,22 @@ class TiffSummaryReader(private val reader: BinaryReader,
 
     // region State
 
-    private val textTags = mapOf(TiffTag.IMAGE_DESCRIPTION to TextTag("ImageDescription", MetadataCategory.Other),
-                                 TiffTag.MAKE to TextTag("Make", MetadataCategory.Device),
-                                 TiffTag.MODEL to TextTag("Model", MetadataCategory.Device),
-                                 TiffTag.SOFTWARE to TextTag("Software", MetadataCategory.Software),
-                                 TiffTag.DATE_TIME to TextTag("DateTime", MetadataCategory.DateTime),
-                                 TiffTag.ARTIST to TextTag("Artist", MetadataCategory.People),
-                                 TiffTag.HOST_COMPUTER to TextTag("HostComputer", MetadataCategory.Device),
-                                 TiffTag.COPYRIGHT to TextTag("Copyright", MetadataCategory.People),
-                                 TiffTag.DATE_TIME_ORIGINAL to TextTag("DateTimeOriginal", MetadataCategory.DateTime),
-                                 TiffTag.DATE_TIME_DIGITIZED to TextTag("DateTimeDigitized", MetadataCategory.DateTime),
-                                 TiffTag.IMAGE_UNIQUE_ID to TextTag("ImageUniqueID", MetadataCategory.Device),
-                                 TiffTag.CAMERA_OWNER_NAME to TextTag("CameraOwnerName", MetadataCategory.People),
-                                 TiffTag.BODY_SERIAL_NUMBER to TextTag("BodySerialNumber", MetadataCategory.Device),
-                                 TiffTag.LENS_MAKE to TextTag("LensMake", MetadataCategory.Device),
-                                 TiffTag.LENS_MODEL to TextTag("LensModel", MetadataCategory.Device),
-                                 TiffTag.LENS_SERIAL_NUMBER to TextTag("LensSerialNumber", MetadataCategory.Device))
+    private val textTags = mapOf(TiffTag.IMAGE_DESCRIPTION to TextTag(MetadataLabel.IMAGE_DESCRIPTION, MetadataCategory.Other),
+                                 TiffTag.MAKE to TextTag(MetadataLabel.MAKE, MetadataCategory.Device),
+                                 TiffTag.MODEL to TextTag(MetadataLabel.MODEL, MetadataCategory.Device),
+                                 TiffTag.SOFTWARE to TextTag(MetadataLabel.SOFTWARE, MetadataCategory.Software),
+                                 TiffTag.DATE_TIME to TextTag(MetadataLabel.DATE_TIME, MetadataCategory.DateTime),
+                                 TiffTag.ARTIST to TextTag(MetadataLabel.ARTIST, MetadataCategory.People),
+                                 TiffTag.HOST_COMPUTER to TextTag(MetadataLabel.HOST_COMPUTER, MetadataCategory.Device),
+                                 TiffTag.COPYRIGHT to TextTag(MetadataLabel.COPYRIGHT, MetadataCategory.People),
+                                 TiffTag.DATE_TIME_ORIGINAL to TextTag(MetadataLabel.DATE_TIME_ORIGINAL, MetadataCategory.DateTime),
+                                 TiffTag.DATE_TIME_DIGITIZED to TextTag(MetadataLabel.DATE_TIME_DIGITIZED, MetadataCategory.DateTime),
+                                 TiffTag.IMAGE_UNIQUE_ID to TextTag(MetadataLabel.IMAGE_UNIQUE_ID, MetadataCategory.Device),
+                                 TiffTag.CAMERA_OWNER_NAME to TextTag(MetadataLabel.CAMERA_OWNER_NAME, MetadataCategory.People),
+                                 TiffTag.BODY_SERIAL_NUMBER to TextTag(MetadataLabel.BODY_SERIAL_NUMBER, MetadataCategory.Device),
+                                 TiffTag.LENS_MAKE to TextTag(MetadataLabel.LENS_MAKE, MetadataCategory.Device),
+                                 TiffTag.LENS_MODEL to TextTag(MetadataLabel.LENS_MODEL, MetadataCategory.Device),
+                                 TiffTag.LENS_SERIAL_NUMBER to TextTag(MetadataLabel.LENS_SERIAL_NUMBER, MetadataCategory.Device))
 
     private companion object {
         const val HEADER_SIZE = 8L
@@ -77,16 +78,16 @@ class TiffSummaryReader(private val reader: BinaryReader,
         items += textItems(ifd0)
         if (exifIfd != null) {
             items += textItems(exifIfd)
-            items += opaqueItem(exifIfd, TiffTag.MAKER_NOTE, "MakerNote", MetadataCategory.Device)
-            items += opaqueItem(exifIfd, TiffTag.USER_COMMENT, "UserComment", MetadataCategory.Other)
+            items += opaqueItem(exifIfd, TiffTag.MAKER_NOTE, MetadataLabel.MAKER_NOTE, MetadataCategory.Device)
+            items += opaqueItem(exifIfd, TiffTag.USER_COMMENT, MetadataLabel.USER_COMMENT, MetadataCategory.Other)
         }
         if (gpsIfd != null && gpsIfd.entries.isNotEmpty()) {
-            items += MetadataItem(MetadataCategory.Location, "GPS", gpsCoordinates(gpsIfd) ?: "")
+            items += MetadataItem(MetadataCategory.Location, MetadataLabel.GPS, gpsCoordinates(gpsIfd) ?: "")
         }
 
         val orientation = ifd0.entries[TiffTag.ORIENTATION]?.let { readUnsigned(it) }?.toInt()
         if (orientation != null) {
-            items += MetadataItem(MetadataCategory.Orientation, "Orientation", orientation.toString())
+            items += MetadataItem(MetadataCategory.Orientation, MetadataLabel.ORIENTATION, orientation.toString())
         }
 
         // IFD1 holds the thumbnail. An offset pointing back at IFD0 would loop, so it's ignored.
@@ -94,7 +95,7 @@ class TiffSummaryReader(private val reader: BinaryReader,
             val ifd1 = readIfd(ifd0.nextIfdOffset)
             if (ifd1.entries.isNotEmpty()) {
                 val thumbnailLength = ifd1.entries[TiffTag.THUMBNAIL_LENGTH]?.let { readUnsigned(it) } ?: 0L
-                items += MetadataItem(MetadataCategory.Thumbnail, "Thumbnail", byteSize = thumbnailLength)
+                items += MetadataItem(MetadataCategory.Thumbnail, MetadataLabel.THUMBNAIL, byteSize = thumbnailLength)
             }
         }
 

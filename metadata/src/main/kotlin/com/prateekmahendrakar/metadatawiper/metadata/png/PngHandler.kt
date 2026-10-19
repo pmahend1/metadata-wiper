@@ -5,6 +5,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.FormatHandler
 import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
@@ -58,7 +60,7 @@ class PngHandler : FormatHandler {
     override fun inspect(input: SeekableByteChannel): InspectionResult {
         val reader = BinaryReader(input)
         val chunks = PngChunkReader(reader).read()
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         return InspectionResult(format, findItems(reader, chunks, warnings), warnings)
     }
 
@@ -72,7 +74,7 @@ class PngHandler : FormatHandler {
                        options: StripOptions): StripReport {
         val reader = BinaryReader(input)
         val chunks = PngChunkReader(reader).read()
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         val items = findItems(reader, chunks, warnings)
         val orientation = keptOrientation(reader, chunks, options)
 
@@ -99,18 +101,18 @@ class PngHandler : FormatHandler {
 
     private fun findItems(reader: BinaryReader,
                           chunks: List<PngChunk>,
-                          warnings: MutableList<String>): List<MetadataItem> {
+                          warnings: MutableList<MetadataWarning>): List<MetadataItem> {
         val items = mutableListOf<MetadataItem>()
         for (chunk in chunks) {
             when (chunk.type) {
                 in copiedTypes -> continue
                 in textTypes -> items += textItem(reader, chunk)
                 PngChunkType.ICCP -> items += MetadataItem(MetadataCategory.ColorProfile,
-                                                           "ICC profile",
+                                                           MetadataLabel.ICC_PROFILE,
                                                            readKeyword(reader, chunk),
                                                            chunk.dataLength)
                 PngChunkType.TIME -> items += MetadataItem(MetadataCategory.DateTime,
-                                                           "Modification time",
+                                                           MetadataLabel.MODIFICATION_TIME,
                                                            readTime(reader, chunk),
                                                            chunk.dataLength)
                 PngChunkType.EXIF -> {
@@ -120,13 +122,13 @@ class PngHandler : FormatHandler {
                     }
                     items += exif.items
                 }
-                else -> items += MetadataItem(MetadataCategory.Other, "Ancillary chunk", chunk.type, chunk.dataLength)
+                else -> items += MetadataItem(MetadataCategory.Other, MetadataLabel.ANCILLARY_CHUNK, chunk.type, chunk.dataLength)
             }
         }
 
         val trailerSize = reader.size - chunks.last().end
         if (trailerSize > 0) {
-            items += MetadataItem(MetadataCategory.EmbeddedMedia, "Data after end of image", byteSize = trailerSize)
+            items += MetadataItem(MetadataCategory.EmbeddedMedia, MetadataLabel.TRAILING_DATA, byteSize = trailerSize)
         }
         return items
     }
@@ -143,7 +145,7 @@ class PngHandler : FormatHandler {
         val keywordEnd = bytes.indexOfNull(0) ?: bytes.size
         val keyword = String(bytes, 0, keywordEnd, Charsets.ISO_8859_1)
         if (chunk.type == PngChunkType.INTERNATIONAL_TEXT && keyword == XMP_KEYWORD) {
-            return MetadataItem(MetadataCategory.Other, "XMP", byteSize = chunk.dataLength)
+            return MetadataItem(MetadataCategory.Other, MetadataLabel.XMP, byteSize = chunk.dataLength)
         }
 
         val text = when (chunk.type) {
@@ -153,7 +155,7 @@ class PngHandler : FormatHandler {
         }
         val category = keywordCategories[keyword] ?: MetadataCategory.Other
         return MetadataItem(category,
-                            keyword.ifEmpty { "Text" },
+                            keyword.ifEmpty { MetadataLabel.TEXT },
                             text.trim().take(MAX_DETAIL_LENGTH),
                             chunk.dataLength)
     }

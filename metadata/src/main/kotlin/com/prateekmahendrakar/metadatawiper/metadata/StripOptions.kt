@@ -6,8 +6,10 @@ data class StripOptions(val keepColorProfile: Boolean = true,
     // region Methods
 
     // Anything these options don't keep must be gone from a stripped file, which is what verification checks.
-    fun keeps(item: MetadataItem): Boolean {
-        return when (item.category) {
+    fun keeps(item: MetadataItem): Boolean = keeps(item.category)
+
+    fun keeps(category: MetadataCategory): Boolean {
+        return when (category) {
             MetadataCategory.ColorProfile -> keepColorProfile
             MetadataCategory.Orientation -> keepOrientation
             else -> false
