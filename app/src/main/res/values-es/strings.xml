@@ -4,7 +4,7 @@
     <string name="selected_image">Imagen seleccionada</string>
 
     <string name="home_headline">Elimina los detalles ocultos antes de compartir</string>
-    <string name="home_body">Las imágenes pueden incluir dónde se tomaron, el teléfono que las tomó y cuándo. Mira lo que contiene una imagen y elimínalo.</string>
+    <string name="home_body">Las imágenes pueden registrar dónde y cuándo se tomaron, y qué teléfono las tomó. Revisa esos detalles y luego elimínalos.</string>
     <string name="choose_images">Elegir imágenes</string>
     <string name="choose_several_hint">¿Varias? Mantén pulsada la primera imagen.</string>
 

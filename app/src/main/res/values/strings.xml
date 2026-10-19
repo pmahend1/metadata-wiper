@@ -6,7 +6,7 @@
     <string name="selected_image">Selected image</string>
 
     <string name="home_headline">Remove hidden details before you share</string>
-    <string name="home_body">Images can carry where they were taken, the phone that took them and when. See what\'s inside an image and remove it.</string>
+    <string name="home_body">Images can record where and when they were taken, and which phone took them. See those details, then remove them.</string>
     <string name="choose_images">Choose images</string>
     <string name="choose_several_hint">Choosing several? Long-press the first image.</string>
 
