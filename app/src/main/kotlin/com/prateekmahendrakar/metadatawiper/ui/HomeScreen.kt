@@ -94,7 +94,9 @@ fun HomeScreen(isBusy: Boolean,
                          textAlign = TextAlign.Center)
                     Button(onClick = { openFilesLauncher.launch(arrayOf("image/*")) },
                            enabled = isBusy == false,
-                           modifier = Modifier.height(56.dp)) {
+                           modifier = Modifier
+                               .padding(top = 16.dp)
+                               .height(56.dp)) {
                         Icon(painter = painterResource(id = R.drawable.image_24px), contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(text = stringResource(id = R.string.choose_images), style = MaterialTheme.typography.titleMedium)
