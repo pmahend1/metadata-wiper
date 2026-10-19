@@ -37,6 +37,7 @@ import com.prateekmahendrakar.metadatawiper.wipe.MetadataGroup
 import com.prateekmahendrakar.metadatawiper.wipe.MetadataRow
 import com.prateekmahendrakar.metadatawiper.wipe.MetadataSections
 import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
+import java.util.Locale
 
 @Composable
 fun MetadataDetails(file: SelectedFile,
@@ -156,7 +157,7 @@ private fun MetadataRowItem(row: MetadataRow) {
     // A size only helps when there's no text to show, e.g. for a thumbnail or an embedded video.
     val value = when {
         readableValue != null -> stringResource(id = readableValue)
-        row.value.isNotEmpty() -> row.value
+        row.value.isNotEmpty() -> ExifDateText.format(row.value, Locale.getDefault()) ?: row.value
         row.byteSize > 0 -> Formatter.formatShortFileSize(context, row.byteSize)
         else -> stringResource(id = R.string.value_present)
     }

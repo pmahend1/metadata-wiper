@@ -57,6 +57,7 @@ import com.prateekmahendrakar.metadatawiper.wipe.WipeAction
 import com.prateekmahendrakar.metadatawiper.wipe.WipeFailure
 import com.prateekmahendrakar.metadatawiper.wipe.WipeResult
 import com.prateekmahendrakar.metadatawiper.wipe.WipeUiState
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -188,7 +189,8 @@ private fun ResultDetails(result: WipeResult) {
             ReportSection(R.string.report_removed, result.report.removed)
             ReportSection(R.string.report_kept, result.report.kept)
             val decodeWarning = stringResource(id = R.string.decode_check_skipped)
-            val warnings = if (result.decodeCheckSkipped) result.report.warnings + decodeWarning else result.report.warnings
+            val reportWarnings = result.report.warnings.map { stringResource(id = WarningText.of(it.kind), it.types.joinToString()) }
+            val warnings = if (result.decodeCheckSkipped) reportWarnings + decodeWarning else reportWarnings
             if (warnings.isNotEmpty()) {
                 SectionTitle(R.string.report_warnings)
                 warnings.forEach { Text(text = it, style = MaterialTheme.typography.bodyMedium) }
@@ -227,7 +229,7 @@ private fun reportLine(item: MetadataItem): String {
     val detail = when {
         readableValue != null -> readableValue
         item.detail.isEmpty() && item.byteSize > 0 -> Formatter.formatShortFileSize(LocalContext.current, item.byteSize)
-        else -> item.detail
+        else -> ExifDateText.format(item.detail, Locale.getDefault()) ?: item.detail
     }
     return listOf(label, detail).filter { it.isNotEmpty() }
                                 .joinToString(" · ")

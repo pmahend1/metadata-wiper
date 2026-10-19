@@ -1,6 +1,7 @@
 package com.prateekmahendrakar.metadatawiper.metadata.heif
 
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BlankedRange
 
 /*
@@ -9,6 +10,6 @@ import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BlankedRange
  * the input only when removed boxes at the end of the file are cut off.
  */
 data class HeifStripPlan(val items: List<MetadataItem>,
-                         val warnings: List<String>,
+                         val warnings: List<MetadataWarning>,
                          val blanked: List<BlankedRange>,
                          val outputLength: Long)

@@ -6,6 +6,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.HandlerHarness
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarningKind
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
@@ -156,9 +158,9 @@ class HeifSyntheticFileTest {
         val result = harness.inspect(input)
         assertEquals(emptyList<MetadataItem>(), result.items)
         assertEquals(listOf(HeifStripPlanner.SEQUENCE_WARNING,
-                            "Boxes this app doesn't recognise (fooo) were left in place.",
-                            "Items of a type this app doesn't recognise (abcd) were left in place.",
-                            "Image properties this app doesn't recognise (zzzz) were left in place.",
+                            MetadataWarning(MetadataWarningKind.UnknownBoxesKept, listOf("fooo")),
+                            MetadataWarning(MetadataWarningKind.UnknownItemTypesKept, listOf("abcd")),
+                            MetadataWarning(MetadataWarningKind.UnknownPropertiesKept, listOf("zzzz")),
                             HeifStripPlanner.THUMBNAIL_WARNING,
                             HeifStripPlanner.AUXILIARY_WARNING),
                      result.warnings)

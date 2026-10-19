@@ -108,25 +108,6 @@ fun HomeScreen(isBusy: Boolean,
                          textAlign = TextAlign.Center)
                 }
             }
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 20.dp),
-                   horizontalAlignment = Alignment.CenterHorizontally,
-                   verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(painter = painterResource(id = R.drawable.lock_24px),
-                         contentDescription = null,
-                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                         modifier = Modifier.size(16.dp))
-                    Text(text = stringResource(id = R.string.offline_promise),
-                         style = MaterialTheme.typography.bodyMedium,
-                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(text = stringResource(id = R.string.share_in_hint),
-                     style = MaterialTheme.typography.bodySmall,
-                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                     textAlign = TextAlign.Center)
-            }
         }
     }
 }

@@ -6,6 +6,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
@@ -62,7 +64,7 @@ class WebPHandler : FormatHandler {
     override fun inspect(input: SeekableByteChannel): InspectionResult {
         val reader = BinaryReader(input)
         val chunks = readChunks(reader)
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         return InspectionResult(format, findItems(reader, chunks, warnings), warnings)
     }
 
@@ -76,7 +78,7 @@ class WebPHandler : FormatHandler {
                        options: StripOptions): StripReport {
         val reader = BinaryReader(input)
         val chunks = readChunks(reader)
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<MetadataWarning>()
         val items = findItems(reader, chunks, warnings)
         val isExtended = chunks.first().fourCc == VP8X
         val orientation = if (isExtended) keptOrientation(reader, chunks, options) else null
@@ -129,13 +131,13 @@ class WebPHandler : FormatHandler {
 
     private fun findItems(reader: BinaryReader,
                           chunks: List<RiffChunk>,
-                          warnings: MutableList<String>): List<MetadataItem> {
+                          warnings: MutableList<MetadataWarning>): List<MetadataItem> {
         val items = mutableListOf<MetadataItem>()
         for (chunk in chunks) {
             when (chunk.fourCc) {
                 in copiedFourCcs -> continue
-                ICCP -> items += MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = chunk.dataLength)
-                XMP -> items += MetadataItem(MetadataCategory.Other, "XMP", byteSize = chunk.dataLength)
+                ICCP -> items += MetadataItem(MetadataCategory.ColorProfile, MetadataLabel.ICC_PROFILE, byteSize = chunk.dataLength)
+                XMP -> items += MetadataItem(MetadataCategory.Other, MetadataLabel.XMP, byteSize = chunk.dataLength)
                 EXIF -> {
                     val exif = inspectExif(reader, chunk)
                     if (exif.isDamaged) {
@@ -144,7 +146,7 @@ class WebPHandler : FormatHandler {
                     items += exif.items
                 }
                 else -> items += MetadataItem(MetadataCategory.Other,
-                                              "Unknown chunk",
+                                              MetadataLabel.UNKNOWN_CHUNK,
                                               chunk.fourCc.trim(),
                                               chunk.dataLength)
             }
@@ -152,7 +154,7 @@ class WebPHandler : FormatHandler {
 
         val trailerSize = reader.size - chunks.last().end
         if (trailerSize > 0) {
-            items += MetadataItem(MetadataCategory.EmbeddedMedia, "Data after end of image", byteSize = trailerSize)
+            items += MetadataItem(MetadataCategory.EmbeddedMedia, MetadataLabel.TRAILING_DATA, byteSize = trailerSize)
         }
         return items
     }

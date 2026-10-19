@@ -6,6 +6,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
@@ -93,11 +94,11 @@ class BmpHandler : FormatHandler {
         }
         if (profile.isLinked) {
             return listOf(MetadataItem(MetadataCategory.People,
-                                       "Linked color profile path",
+                                       MetadataLabel.LINKED_PROFILE_PATH,
                                        readPath(reader, profile),
                                        profile.length))
         }
-        return listOf(MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = profile.length))
+        return listOf(MetadataItem(MetadataCategory.ColorProfile, MetadataLabel.ICC_PROFILE, byteSize = profile.length))
     }
 
     /*

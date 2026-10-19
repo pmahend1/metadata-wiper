@@ -5,6 +5,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.FormatHandler
 import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
+import com.prateekmahendrakar.metadatawiper.metadata.MetadataLabel
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
@@ -87,17 +88,17 @@ class GifHandler : FormatHandler {
             val size = block.end - block.start
             when (block.kind) {
                 in copiedKinds -> continue
-                GifBlockKind.Comment -> items += MetadataItem(MetadataCategory.Other, "Comment", readComment(reader, block), size)
+                GifBlockKind.Comment -> items += MetadataItem(MetadataCategory.Other, MetadataLabel.COMMENT, readComment(reader, block), size)
                 GifBlockKind.OtherExtension -> items += MetadataItem(MetadataCategory.Other,
-                                                                     "Extension",
+                                                                     MetadataLabel.EXTENSION,
                                                                      extensionLabel(reader, block),
                                                                      size)
                 GifBlockKind.Application -> when (block.applicationId) {
                     in loopingApplicationIds -> continue
-                    ICC_APPLICATION_ID -> items += MetadataItem(MetadataCategory.ColorProfile, "ICC profile", byteSize = size)
-                    XMP_APPLICATION_ID -> items += MetadataItem(MetadataCategory.Other, "XMP", byteSize = size)
+                    ICC_APPLICATION_ID -> items += MetadataItem(MetadataCategory.ColorProfile, MetadataLabel.ICC_PROFILE, byteSize = size)
+                    XMP_APPLICATION_ID -> items += MetadataItem(MetadataCategory.Other, MetadataLabel.XMP, byteSize = size)
                     else -> items += MetadataItem(MetadataCategory.Other,
-                                                  "Application extension",
+                                                  MetadataLabel.APPLICATION_EXTENSION,
                                                   block.applicationId.trim(),
                                                   size)
                 }
@@ -107,7 +108,7 @@ class GifHandler : FormatHandler {
 
         val trailerSize = reader.size - blocks.last().end
         if (trailerSize > 0) {
-            items += MetadataItem(MetadataCategory.EmbeddedMedia, "Data after end of image", byteSize = trailerSize)
+            items += MetadataItem(MetadataCategory.EmbeddedMedia, MetadataLabel.TRAILING_DATA, byteSize = trailerSize)
         }
         return items
     }
