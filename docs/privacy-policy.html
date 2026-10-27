@@ -18,7 +18,7 @@
     <main class="wrap">
         <article>
             <h1>Privacy Policy</h1>
-            <p><strong>Last Updated:</strong> November 19, 2025</p>
+            <p><strong>Last Updated:</strong> October 26, 2026</p>
 
             <p>Thank you for using Metadata Wiper (the "App"). This privacy policy outlines how data is handled within
                 the application. Your privacy is our top priority.</p>
@@ -31,37 +31,55 @@
             <ul>
                 <li><strong>Personal Information:</strong> We do not ask for or collect any personal information such as
                     your name, email address, location, or contacts.</li>
-                <li><strong>Usage Analytics:</strong> The App does not contain any third-party analytics or tracking
-                    tools. We do not monitor how you use the app.</li>
+                <li><strong>Usage Analytics:</strong> The App does not contain any third-party analytics, crash reporting,
+                    advertising or tracking tools. We do not monitor how you use the app.</li>
                 <li><strong>Image or File Data:</strong> Your images and their metadata are processed locally on your
                     device and are never sent to any external server.</li>
             </ul>
 
+            <p>The App works entirely offline. It does not have the internet permission, so it has no way to send
+                anything off your device.</p>
+
             <h2>2. How the App Works</h2>
-            <p>The function of Metadata Wiper is to remove EXIF (Exchangeable Image File Format) metadata from images
-                you select. The process is entirely offline:</p>
+            <p>The function of Metadata Wiper is to remove metadata, such as location, device details and dates, from
+                images you select. It supports JPEG, PNG, WebP, HEIC/HEIF, AVIF, GIF and BMP images. The process is
+                entirely offline:</p>
             <ol>
-                <li><strong>File Selection:</strong> The App uses the standard Android Storage Access Framework for you
-                    to select one or more images from your device's local storage. The App only gains temporary, user-consented
-                    access to the specific files you choose.</li>
-                <li><strong>Local Processing:</strong> All metadata reading and removal happens entirely and exclusively
-                    on your device.</li>
-                <li><strong>Saving the Cleaned File:</strong> After processing, you have two options for saving the cleaned images:
+                <li><strong>File Selection:</strong> You choose images in one of two ways, and the App only gains
+                    temporary, user-consented access to the specific files you choose:
                     <ul>
-                        <li><strong>Overwrite Mode:</strong> If you enable this option in the settings, the App will overwrite the original files with the cleaned versions.</li>
-                        <li><strong>Create a New File:</strong> If overwrite mode is disabled, the App will prompt you to choose a new location on your device to save the "cleaned" image(s). You have full control over where the files are saved.</li>
+                        <li><strong>The system file picker:</strong> The App uses the standard Android Storage Access Framework for you to select one or more images.</li>
+                        <li><strong>Sharing to the App:</strong> You can share images to the App from your gallery or another app. Android gives the App access to just the images you shared.</li>
+                    </ul>
+                </li>
+                <li><strong>Local Processing:</strong> All metadata reading and removal happens entirely and exclusively
+                    on your device. While an image is being cleaned, the App keeps a temporary copy in its private
+                    storage, which other apps can't access. That copy is deleted as soon as the image is done,
+                    including when cleaning fails.</li>
+                <li><strong>What Is Kept:</strong> By default the App keeps the color profile and orientation, so images
+                    still look right. They rarely identify anyone. You can choose to remove them too in the App's
+                    Privacy settings.</li>
+                <li><strong>Saving or Sharing the Cleaned File:</strong> After processing, you choose what happens to the cleaned images:
+                    <ul>
+                        <li><strong>Clean &amp; save:</strong> The App asks you to choose a location on your device to save the cleaned image(s). You have full control over where the files are saved.</li>
+                        <li><strong>Clean &amp; replace:</strong> If you enable overwriting in the settings, the App replaces the original files with the cleaned versions. It only replaces a file once the cleaned copy has been checked.</li>
+                        <li><strong>Clean &amp; share:</strong> The App saves the cleaned copies in its private storage and opens the Android share sheet. Only the app you pick is given access to those copies. Anything you send that way is handled under that app's own privacy policy. The App deletes these cleaned copies the next time you share or open the App.</li>
                     </ul>
                 </li>
                 <li><strong>No Original File Modification (by default):</strong> The App does not alter your original image file unless you explicitly enable the overwrite option. By default, it creates a new, separate copy with the metadata removed, leaving your original file untouched.</li>
             </ol>
 
             <h2>3. Permissions Required</h2>
-            <p>The Metadata Wiper application uses modern Android practices that minimize the need for permissions.</p>
+            <p>The App requests <strong>no permissions at all</strong>.</p>
             <ul>
-                <li>The app <strong>does not require</strong> broad <code>READ_EXTERNAL_STORAGE</code> or
-                    <code>WRITE_EXTERNAL_STORAGE</code> permissions. It uses the system file picker, which grants
-                    temporary access to files selected by the user.
+                <li>It does not have the internet permission, so it cannot connect to any network.</li>
+                <li>It does not require broad <code>READ_EXTERNAL_STORAGE</code>, <code>WRITE_EXTERNAL_STORAGE</code> or
+                    <code>READ_MEDIA_*</code> permissions. It uses the system file picker and Android's share sheet,
+                    which grant temporary access to only the files you choose.
                 </li>
+                <li>It does not request <code>ACCESS_MEDIA_LOCATION</code>. Because of this, Android hides the exact GPS
+                    position in your images from the App, and the App shows only that location data is present. The
+                    location data is still removed from the cleaned image.</li>
             </ul>
 
             <h2>4. Third-Party Libraries</h2>
@@ -70,13 +88,14 @@
             <ul>
                 <li><strong>AndroidX Libraries (Jetpack):</strong> Used for core application functionality
                     (<code>androidx.core.ktx</code>, <code>androidx.lifecycle.runtime.ktx</code>,
-                    <code>androidx.activity.compose</code>, <code>androidx.material3</code>).
+                    <code>androidx.activity.compose</code>, <code>androidx.material3</code>,
+                    <code>androidx.core.splashscreen</code>).
                 </li>
                 <li><strong>Jetpack Compose:</strong> Used for building the app's user interface.</li>
                 <li><strong>Coil (coil-compose):</strong> Used for efficiently loading and displaying the image you
                     select <em>locally</em> on your device's screen.</li>
-                <li><strong>ExifInterface (androidx.exifinterface):</strong> Used for reading and removing the EXIF
-                    metadata from the image file on your device.</li>
+                <li><strong>ExifInterface (androidx.exifinterface):</strong> Used for reading camera details, such as
+                    exposure and lens settings, to show them to you. Metadata removal is done by the App's own code.</li>
             </ul>
             <p>None of these libraries are used to collect or transmit personal user data from the App.</p>
 

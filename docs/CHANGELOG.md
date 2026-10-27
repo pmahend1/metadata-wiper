@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 26-Oct-2026
+
+### New
+
+- **More Formats**: Cleans JPEG, PNG, WebP, HEIC/HEIF, AVIF, GIF and BMP images, not just JPEG.
+- **No Quality Loss**: Metadata is removed without re-compressing the image, so the picture itself is unchanged.
+- **Removes More Than EXIF**: Also removes XMP, IPTC, comments, embedded thumbnails, Motion Photo videos and data hidden after the end of the image.
+- **Grouped by Risk**: Metadata is grouped into Location, People, Device, Date and time, Thumbnail and Embedded media, with the riskiest first and readable values instead of raw tags.
+- **Results Screen**: After cleaning, you see what was removed and what was kept for each image. If part of a file isn't recognised, the app says so instead of calling it clean.
+- **Share In and Out**: Share images to the app from your gallery or any other app, and use Clean & share to send cleaned copies straight to another app.
+- **Privacy Settings**: Choose whether to keep the color profile (on by default) and orientation (on by default), and whether to give cleaned files random names (off by default).
+
+### Improvements
+
+- **Redesigned UI**: New Home, Review, Results and Settings screens with clear Clean & save, Clean & share and Clean & replace actions.
+- **Safer Cleaning**: Each cleaned image is checked before it's saved, and the original is only replaced once the cleaned copy is ready.
+- **Clearer Wording**: Says "metadata" instead of "EXIF", shows dates in your own format and orientation in plain words, in English and Spanish.
+- **No Permissions**: The app asks for no permissions at all.
+
 ## [1.4.0] - 22-Mar-2026
 
 - Updated gradle and packages.
