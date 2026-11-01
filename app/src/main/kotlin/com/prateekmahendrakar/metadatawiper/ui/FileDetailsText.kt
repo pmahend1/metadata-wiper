@@ -18,6 +18,12 @@ fun fileDetailsText(file: SelectedFile): String {
 fun formatName(format: FileFormat): String {
     return when (format) {
         FileFormat.WebP -> "WebP"
+        FileFormat.QuickTime -> "MOV"
+        FileFormat.ThreeGpp -> "3GP"
+        FileFormat.Matroska -> "MKV"
+        FileFormat.WebM -> "WebM"
+        FileFormat.MpegTs -> "MPEG-TS"
+        FileFormat.MpegPs -> "MPEG-PS"
         FileFormat.Unknown -> "?"
         else -> format.name.uppercase()
     }

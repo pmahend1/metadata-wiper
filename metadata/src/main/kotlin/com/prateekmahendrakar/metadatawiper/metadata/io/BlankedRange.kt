@@ -1,6 +1,5 @@
-package com.prateekmahendrakar.metadatawiper.metadata.isobmff
+package com.prateekmahendrakar.metadatawiper.metadata.io
 
-import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 import java.io.OutputStream
 
 /*

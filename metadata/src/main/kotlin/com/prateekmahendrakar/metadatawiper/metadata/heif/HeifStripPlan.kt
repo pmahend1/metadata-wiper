@@ -2,7 +2,7 @@ package com.prateekmahendrakar.metadatawiper.metadata.heif
 
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BlankedRange
+import com.prateekmahendrakar.metadatawiper.metadata.io.BlankedRange
 
 /*
  * What a HEIF file holds and, for the options it was planned with, which bytes a strip
