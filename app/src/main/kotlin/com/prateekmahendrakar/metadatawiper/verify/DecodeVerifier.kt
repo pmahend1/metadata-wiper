@@ -54,7 +54,7 @@ class DecodeVerifier {
             FileFormat.Avif -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
             FileFormat.Tiff, FileFormat.Unknown -> false
 
-            // No video handler is registered yet; videos get their own verifier with the pipeline work.
+            // Videos go to VideoDecodeVerifier; BitmapFactory can't read them.
             FileFormat.Mp4, FileFormat.QuickTime, FileFormat.ThreeGpp, FileFormat.Matroska, FileFormat.WebM,
             FileFormat.Avi, FileFormat.MpegTs, FileFormat.MpegPs -> false
         }

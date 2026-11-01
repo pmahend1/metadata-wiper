@@ -1,7 +1,6 @@
 package com.prateekmahendrakar.metadatawiper.ui
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
@@ -120,7 +117,7 @@ private fun BatchSummary(files: List<SelectedFile>,
             if (categoryCounts.isEmpty()) {
                 Text(text = stringResource(id = R.string.no_removable_metadata), style = MaterialTheme.typography.bodyMedium)
             } else {
-                Text(text = pluralStringResource(id = R.plurals.images_can_be_cleaned, count = cleanable, cleanable),
+                Text(text = pluralStringResource(id = R.plurals.files_can_be_cleaned, count = cleanable, cleanable),
                      style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     categoryCounts.forEach { (category, count) ->
@@ -155,10 +152,9 @@ private fun Thumbnail(file: SelectedFile,
         .clip(RoundedCornerShape(12.dp))
         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
         .clickable(onClick = onClick)) {
-        Image(painter = rememberAsyncImagePainter(file.uri),
-              contentDescription = file.displayName,
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize())
+        FileThumbnail(file = file,
+                      contentDescription = file.displayName,
+                      modifier = Modifier.fillMaxSize())
         if (file.canBeCleaned == false) {
             Badge(R.drawable.block_24px, MaterialTheme.colorScheme.inverseSurface, MaterialTheme.colorScheme.inverseOnSurface)
         } else if (hasLocation) {

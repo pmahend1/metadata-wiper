@@ -7,6 +7,9 @@ import com.prateekmahendrakar.metadatawiper.share.PendingShare
 data class WipeUiState(val files: List<SelectedFile> = emptyList(),
                        val canOverwrite: Boolean = true,
                        val isBusy: Boolean = false,
+                       val progress: WipeProgress? = null,
+                       val isCancelling: Boolean = false,
+                       val freeSpace: Long = Long.MAX_VALUE,
                        val results: List<FileWipeResult> = emptyList(),
                        val lastAction: WipeAction? = null,
                        val pendingShare: PendingShare? = null) {
@@ -15,6 +18,9 @@ data class WipeUiState(val files: List<SelectedFile> = emptyList(),
 
     val uncleanableCount: Int
         get() = files.count { it.canBeCleaned == false }
+
+    val spaceToShare: Long
+        get() = WipeSpace.neededToShare(files.filter { it.canBeCleaned }.map { it.byteSize })
 
     val summary: WipeSummary
         get() = WipeSummary.of(results.map { it.result })
@@ -28,6 +34,10 @@ data class WipeUiState(val files: List<SelectedFile> = emptyList(),
     // region Methods
 
     fun hasRemovableMetadata(options: StripOptions): Boolean = files.any { it.hasRemovableMetadata(options) }
+
+    fun spaceToSave(options: StripOptions): Long {
+        return WipeSpace.neededToSave(files.filter { it.hasRemovableMetadata(options) }.map { it.byteSize })
+    }
 
     // endregion Methods
 }

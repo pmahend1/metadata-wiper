@@ -5,14 +5,16 @@ import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
+import com.prateekmahendrakar.metadatawiper.metadata.UnsupportedReason
 
-// A picked file, inspected once at selection so composables never touch the file.
+// A picked file, inspected once at selection so composables never touch the file. unsupportedReason is null for a damaged file.
 data class SelectedFile(val uri: Uri,
                         val displayName: String,
                         val format: FileFormat,
                         val byteSize: Long,
                         val inspection: InspectionResult?,
-                        val metadataGroups: List<MetadataGroup>) {
+                        val metadataGroups: List<MetadataGroup>,
+                        val unsupportedReason: UnsupportedReason? = null) {
 
     // region State
 

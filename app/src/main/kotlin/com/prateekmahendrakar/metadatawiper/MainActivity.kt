@@ -19,8 +19,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import coil.Coil
+import coil.ImageLoader
+import coil.decode.VideoFrameDecoder
 import com.prateekmahendrakar.metadatawiper.model.Theme
 import com.prateekmahendrakar.metadatawiper.share.ShareIntents
 import com.prateekmahendrakar.metadatawiper.ui.HomeScreen
@@ -38,6 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
+        Coil.setImageLoader(ImageLoader.Builder(this).components { add(VideoFrameDecoder.Factory()) }.build())
 
         // A recreated activity (rotation, process restore) gets the same intent back; it was already handled.
         if (savedInstanceState == null) {
@@ -65,6 +70,14 @@ class MainActivity : ComponentActivity() {
                 }
                 enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
                 onDispose { }
+            }
+
+            // A long wipe has no foreground service, so a sleeping screen could end it.
+            val view = LocalView.current
+            val isWiping = wipeState.progress != null
+            DisposableEffect(view, isWiping) {
+                view.keepScreenOn = isWiping
+                onDispose { view.keepScreenOn = false }
             }
 
             MetaDataWiperTheme(darkTheme = useDarkTheme) {
@@ -96,9 +109,10 @@ class MainActivity : ComponentActivity() {
                                        onBack = { showSettings = false })
                     }
 
-                    wipeState.results.isNotEmpty() -> {
+                    wipeState.results.isNotEmpty() || isWiping -> {
                         BackHandler { wipeViewModel.clear() }
                         ResultsScreen(state = wipeState,
+                                      onCancel = { wipeViewModel.cancel() },
                                       onShare = { wipeViewModel.shareCleaned(privacy) },
                                       onDone = { wipeViewModel.clear() })
                     }

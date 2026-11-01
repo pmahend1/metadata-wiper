@@ -7,7 +7,8 @@ import java.io.File
  * private directory and are deleted as soon as the work that needed them ends. Clearing the
  * directory on start catches anything a crash or process kill left behind.
  */
-class TempFileStore(cacheDir: File) {
+class TempFileStore(cacheDir: File,
+                    private val measureUsableSpace: () -> Long = { cacheDir.usableSpace }) {
 
     // region State
 
@@ -16,6 +17,8 @@ class TempFileStore(cacheDir: File) {
     // endregion State
 
     // region Methods
+
+    fun usableSpace(): Long = measureUsableSpace()
 
     fun clear() {
         directory.listFiles()?.forEach { it.deleteRecursively() }

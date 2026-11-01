@@ -2,6 +2,7 @@ package com.prateekmahendrakar.metadatawiper.wipe
 
 import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
+import com.prateekmahendrakar.metadatawiper.metadata.UnsupportedReason
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -14,7 +15,7 @@ class WipeSummaryTest {
         val results = listOf(CleanedResult(StripReport(emptyList(), emptyList(), emptyList())),
                              CleanedResult(StripReport(emptyList(), emptyList(), emptyList())),
                              NothingToRemoveResult,
-                             UnsupportedResult(FileFormat.Png),
+                             UnsupportedResult(FileFormat.Png, UnsupportedReason.NotYetSupported),
                              FailedResult(WipeFailure.WriteFailed))
         assertEquals(WipeSummary(cleaned = 2, nothingToRemove = 1, unsupported = 1, failed = 1), WipeSummary.of(results))
     }

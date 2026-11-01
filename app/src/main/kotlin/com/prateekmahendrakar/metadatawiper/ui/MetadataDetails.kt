@@ -45,7 +45,9 @@ fun MetadataDetails(file: SelectedFile,
                     modifier: Modifier = Modifier) {
     // Never let an unreadable file look like a clean one.
     if (file.canBeCleaned == false) {
-        Text(stringResource(id = R.string.metadata_unreadable), modifier = modifier.padding(vertical = 16.dp))
+        val reason = file.unsupportedReason
+        val message = if (reason == null) stringResource(id = R.string.metadata_unreadable) else unsupportedText(file.format, reason)
+        Text(message, modifier = modifier.padding(vertical = 16.dp))
         return
     }
     val sections = remember(file, options) { MetadataSections.of(file.metadataGroups, options) }

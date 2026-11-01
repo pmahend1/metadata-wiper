@@ -12,17 +12,22 @@ import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
+import com.prateekmahendrakar.metadatawiper.metadata.UnsupportedFileException
+import com.prateekmahendrakar.metadatawiper.metadata.UnsupportedReason
 import com.prateekmahendrakar.metadatawiper.storage.DocumentStore
 import com.prateekmahendrakar.metadatawiper.storage.TempFileStore
 import com.prateekmahendrakar.metadatawiper.verify.DecodeCheck
 import com.prateekmahendrakar.metadatawiper.verify.DecodeVerifier
+import com.prateekmahendrakar.metadatawiper.verify.VideoDecodeVerifier
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.nio.channels.SeekableByteChannel
+import kotlin.coroutines.cancellation.CancellationException
 
 /*
  * Detect → inspect → strip → verify → write, one file at a time. Blocking: callers run it on
@@ -32,6 +37,7 @@ import java.nio.channels.SeekableByteChannel
 class WipeFilesUseCase(private val documentStore: DocumentStore,
                        private val tempFileStore: TempFileStore,
                        private val decodeVerifier: DecodeVerifier,
+                       private val videoDecodeVerifier: VideoDecodeVerifier,
                        private val handlers: FormatHandlerRegistry) {
 
     // region State
@@ -56,14 +62,22 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
         return try {
             withSeekableSource(uri) { input ->
                 val format = detect(input)
-                val inspection = inspectOrNull(handlers.handlerFor(format), input)
+                val handler = handlers.handlerFor(format)
+                var unsupportedReason = if (handler == null) reasonWithoutHandler(format) else null
+                val inspection = try {
+                    inspectOrNull(handler, input)
+                } catch (e: UnsupportedFileException) {
+                    unsupportedReason = e.reason
+                    null
+                }
                 val groups = MetadataGrouping.of(inspection?.items.orEmpty(), readExifDetails(format, input))
                 SelectedFile(uri = uri,
                              displayName = displayName ?: "",
                              format = format,
                              byteSize = input.size(),
                              inspection = inspection,
-                             metadataGroups = groups)
+                             metadataGroups = groups,
+                             unsupportedReason = unsupportedReason)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't read a selected file: ${e.javaClass.simpleName}")
@@ -76,11 +90,16 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
         }
     }
 
-    fun wipe(source: Uri,
+    fun wipe(file: SelectedFile,
              destination: WipeDestination,
-             options: StripOptions): WipeResult {
+             options: StripOptions,
+             monitor: WipeMonitor): WipeResult {
         val result = try {
-            withSeekableSource(source) { input -> wipe(source, input, destination, options) }
+            withSeekableSource(file.uri) { input -> wipe(file.uri, input, destination, options, monitor) }
+        } catch (_: CancellationException) {
+            FailedResult(WipeFailure.Cancelled)
+        } catch (e: InsufficientSpaceException) {
+            FailedResult(WipeFailure.InsufficientSpace, e.bytesNeeded)
         } catch (_: MalformedFileException) {
             FailedResult(WipeFailure.Malformed)
         } catch (e: IOException) {
@@ -96,28 +115,32 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
             documentStore.delete(destination.uri)
         }
         if (destination is LocalFileDestination) {
-            return completeLocalFile(source, destination.file, result)
+            return completeLocalFile(file, destination.file, result, monitor)
         }
         return result
     }
 
     // Sharing needs every file, so one that's already clean is shared as it is.
-    private fun completeLocalFile(source: Uri,
-                                  file: File,
-                                  result: WipeResult): WipeResult {
+    private fun completeLocalFile(source: SelectedFile,
+                                  output: File,
+                                  result: WipeResult,
+                                  monitor: WipeMonitor): WipeResult {
         if (result is CleanedResult) {
             return result
         }
         if (result !is NothingToRemoveResult) {
-            file.delete()
+            output.delete()
             return result
         }
         return try {
-            documentStore.copyTo(source, file)
+            documentStore.copyTo(source.uri, output) { progressStream(it, source.byteSize, WipePhase.Writing, monitor) }
             result
+        } catch (_: CancellationException) {
+            output.delete()
+            FailedResult(WipeFailure.Cancelled)
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't copy a file to share: ${e.javaClass.simpleName}")
-            file.delete()
+            output.delete()
             FailedResult(WipeFailure.WriteFailed)
         }
     }
@@ -125,23 +148,71 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
     private fun wipe(source: Uri,
                      input: SeekableByteChannel,
                      destination: WipeDestination,
-                     options: StripOptions): WipeResult {
+                     options: StripOptions,
+                     monitor: WipeMonitor): WipeResult {
+        throwIfCancelled(monitor)
         val format = detect(input)
-        val handler = handlers.handlerFor(format) ?: return UnsupportedResult(format)
+        val handler = handlers.handlerFor(format) ?: return UnsupportedResult(format, reasonWithoutHandler(format))
+        return try {
+            clean(source, input, format, handler, destination, options, monitor)
+        } catch (e: UnsupportedFileException) {
+            UnsupportedResult(format, e.reason)
+        }
+    }
+
+    private fun clean(source: Uri,
+                      input: SeekableByteChannel,
+                      format: FileFormat,
+                      handler: FormatHandler,
+                      destination: WipeDestination,
+                      options: StripOptions,
+                      monitor: WipeMonitor): WipeResult {
         val inspection = handler.inspect(input)
         if (inspection.items.all { options.keeps(it) }) {
             return NothingToRemoveResult
         }
+        requireFreeSpace(input.size())
 
         return tempFileStore.withTempFile { cleaned ->
-            val report = cleaned.outputStream().buffered().use { handler.strip(input, it, options) }
+            val stripped = progressStream(cleaned.outputStream(), input.size(), WipePhase.Stripping, monitor)
+            val report = stripped.buffered().use { handler.strip(input, it, options) }
+            monitor.onProgress(WipePhase.Verifying, null)
             val result = verify(handler, format, input, cleaned, report, options)
-            if (result is CleanedResult && write(source, cleaned, destination, format) == false) {
+
+            // The last chance to stop: a write over the original can't be abandoned part-way.
+            throwIfCancelled(monitor)
+            if (result is CleanedResult && write(source, cleaned, destination, format, monitor) == false) {
                 FailedResult(WipeFailure.WriteFailed)
             } else {
                 result
             }
         }
+    }
+
+    // A non-seekable source is already copied to a temp file by now, so this covers both copies.
+    private fun requireFreeSpace(byteSize: Long) {
+        val needed = WipeSpace.neededFor(byteSize)
+        if (tempFileStore.usableSpace() < needed) {
+            throw InsufficientSpaceException(needed)
+        }
+    }
+
+    private fun throwIfCancelled(monitor: WipeMonitor) {
+        if (monitor.isCancelled()) {
+            throw CancellationException("Wipe cancelled")
+        }
+    }
+
+    private fun progressStream(output: OutputStream,
+                               totalBytes: Long,
+                               phase: WipePhase,
+                               monitor: WipeMonitor,
+                               isCancelled: () -> Boolean = monitor.isCancelled): OutputStream {
+        return ProgressOutputStream(output, totalBytes, isCancelled) { monitor.onProgress(phase, it) }
+    }
+
+    private fun reasonWithoutHandler(format: FileFormat): UnsupportedReason {
+        return if (format == FileFormat.Unknown) UnsupportedReason.UnknownFormat else UnsupportedReason.NotYetSupported
     }
 
     private fun verify(handler: FormatHandler,
@@ -159,12 +230,15 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
             FileChannel.open(cleaned.toPath()).use { handler.inspect(it) }
         } catch (_: MalformedFileException) {
             return FailedResult(WipeFailure.InvalidOutput)
+        } catch (_: UnsupportedFileException) {
+            return FailedResult(WipeFailure.InvalidOutput)
         }
         if (reinspection.items.any { options.keeps(it) == false }) {
             return FailedResult(WipeFailure.MetadataRemained)
         }
 
-        return when (decodeVerifier.verify(format, input, cleaned)) {
+        val decodeCheck = if (format.isVideo) videoDecodeVerifier.verify(input, cleaned) else decodeVerifier.verify(format, input, cleaned)
+        return when (decodeCheck) {
             DecodeCheck.Passed -> CleanedResult(report)
             DecodeCheck.Skipped -> CleanedResult(report, decodeCheckSkipped = true)
             DecodeCheck.Failed -> FailedResult(WipeFailure.DecodeFailed)
@@ -174,23 +248,39 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
     private fun write(source: Uri,
                       cleaned: File,
                       destination: WipeDestination,
-                      format: FileFormat): Boolean {
+                      format: FileFormat,
+                      monitor: WipeMonitor): Boolean {
+        val total = cleaned.length()
+        val progress = { output: OutputStream -> progressStream(output, total, WipePhase.Writing, monitor) }
         var created: Uri? = null
         return try {
             when (destination) {
-                OverwriteDestination -> documentStore.writeDocument(source, cleaned)
-                is DocumentDestination -> documentStore.writeDocument(destination.uri, cleaned)
+                // Truncating the original has already happened by the first write, so nothing here may cancel it.
+                OverwriteDestination -> documentStore.writeDocument(source, cleaned) { progressStream(it, total, WipePhase.Writing, monitor) { false } }
+                is DocumentDestination -> documentStore.writeDocument(destination.uri, cleaned, progress)
                 is FolderDestination -> {
-                    created = documentStore.createInFolder(destination.treeUri, format.mimeType, destination.displayName)
-                    documentStore.writeDocument(created, cleaned)
+                    val mimeType = OutputMimeType.of(destination.displayName, format)
+                    created = documentStore.createInFolder(destination.treeUri, mimeType, destination.displayName)
+                    documentStore.writeDocument(created, cleaned, progress)
                 }
-                is LocalFileDestination -> cleaned.copyTo(destination.file, overwrite = true)
+                is LocalFileDestination -> moveTo(destination.file, cleaned)
             }
             true
+        } catch (e: CancellationException) {
+            created?.let { documentStore.delete(it) }
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't write a cleaned file: ${e.javaClass.simpleName}")
             created?.let { documentStore.delete(it) }
             false
+        }
+    }
+
+    // Both live in the app's cache, so a rename avoids holding a second copy of a large video.
+    private fun moveTo(destination: File,
+                       cleaned: File) {
+        if (cleaned.renameTo(destination) == false) {
+            cleaned.copyTo(destination, overwrite = true)
         }
     }
 

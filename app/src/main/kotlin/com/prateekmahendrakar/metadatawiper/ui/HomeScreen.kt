@@ -92,14 +92,14 @@ fun HomeScreen(isBusy: Boolean,
                          style = MaterialTheme.typography.bodyLarge,
                          color = MaterialTheme.colorScheme.onSurfaceVariant,
                          textAlign = TextAlign.Center)
-                    Button(onClick = { openFilesLauncher.launch(arrayOf("image/*")) },
+                    Button(onClick = { openFilesLauncher.launch(arrayOf("image/*", "video/*")) },
                            enabled = isBusy == false,
                            modifier = Modifier
                                .padding(top = 16.dp)
                                .height(56.dp)) {
                         Icon(painter = painterResource(id = R.drawable.image_24px), contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = stringResource(id = R.string.choose_images), style = MaterialTheme.typography.titleMedium)
+                        Text(text = stringResource(id = R.string.choose_files), style = MaterialTheme.typography.titleMedium)
                     }
                     if (isBusy) {
                         LinearProgressIndicator(modifier = Modifier.width(160.dp))

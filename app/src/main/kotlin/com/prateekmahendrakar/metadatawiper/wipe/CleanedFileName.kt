@@ -13,6 +13,9 @@ object CleanedFileName {
     private const val RANDOM_NAME_LENGTH = 12
     private const val HEX_DIGITS = "0123456789abcdef"
 
+    // Other names for a format. An M4V is an MP4, but people expect it to stay an M4V.
+    private val extensionAliases = mapOf(FileFormat.Mp4 to setOf("m4v"))
+
     // endregion State
 
     // region Methods
@@ -29,22 +32,28 @@ object CleanedFileName {
         val baseName = originalName?.substringBeforeLast('.')
                                    ?.takeIf { it.isNotBlank() }
                        ?: FALLBACK_BASE_NAME
-        return withExtension(baseName + SUFFIX, format)
+        return withExtension(baseName + SUFFIX, extensionFor(originalName, format))
     }
 
     fun random(format: FileFormat,
                random: Random = Random.Default): String {
         val baseName = (1..RANDOM_NAME_LENGTH).map { HEX_DIGITS[random.nextInt(HEX_DIGITS.length)] }
                                               .joinToString("")
-        return withExtension(baseName, format)
+        return withExtension(baseName, format.extension)
+    }
+
+    private fun extensionFor(originalName: String?,
+                             format: FileFormat): String {
+        val originalExtension = originalName?.substringAfterLast('.', "")?.lowercase()
+        return if (originalExtension in extensionAliases[format].orEmpty()) originalExtension.orEmpty() else format.extension
     }
 
     private fun withExtension(baseName: String,
-                              format: FileFormat): String {
-        if (format.extension.isEmpty()) {
+                              extension: String): String {
+        if (extension.isEmpty()) {
             return baseName
         }
-        return "$baseName.${format.extension}"
+        return "$baseName.$extension"
     }
 
     // endregion Methods
