@@ -124,6 +124,11 @@
     <string name="label_extra_chunk">Fragmento de datos adicional</string>
     <string name="label_text">Texto</string>
     <string name="label_extension">Datos de extensión</string>
+    <string name="label_compressor_name">Nombre del codificador de vídeo</string>
+    <string name="label_track_timestamps">Fechas de las pistas</string>
+    <string name="label_vendor_data">Datos del fabricante de la cámara</string>
+    <string name="label_leftover_data">Datos residuales en espacio sin usar</string>
+    <string name="label_samsung_trailer">Datos de Samsung tras el vídeo</string>
     <string name="warning_damaged_exif">Un bloque EXIF está dañado, así que no se puede mostrar su contenido. Se elimina igualmente.</string>
     <string name="warning_thumbnail_kept">Se conservó la miniatura de vista previa, porque quitarla puede impedir que la imagen se abra.</string>
     <string name="warning_auxiliary_kept">Se conservaron las imágenes auxiliares, como un mapa de profundidad o de ganancia HDR.</string>
@@ -131,6 +136,10 @@
     <string name="warning_unknown_boxes">Se dejaron sin cambios bloques de datos que esta app no reconoce (%s).</string>
     <string name="warning_unknown_items">Se dejaron sin cambios elementos de un tipo que esta app no reconoce (%s).</string>
     <string name="warning_unknown_properties">Se dejaron sin cambios propiedades de imagen que esta app no reconoce (%s).</string>
+    <string name="warning_subtitles_kept">Se conservaron las pistas de subtítulos. Algunos drones escriben en ellas su posición, así que revísalas si te importa.</string>
+    <string name="warning_chapters_kept">Se conservaron los títulos de los capítulos.</string>
+    <string name="warning_in_stream_not_checked">Esta cámara puede guardar la fecha y la ubicación dentro de la secuencia de vídeo, algo que esta app aún no comprueba.</string>
+    <string name="warning_unknown_tracks">Se dejaron sin cambios pistas de un tipo que esta app no reconoce (%s).</string>
     <string name="value_present">Presente</string>
     <string name="note_gps_hidden">Android oculta la posición exacta a esta app. Los datos de ubicación se eliminan igualmente.</string>
     <string name="note_linked_profile">Esta ruta contiene un nombre de usuario. Los colores de la imagen no dependen de ella.</string>
