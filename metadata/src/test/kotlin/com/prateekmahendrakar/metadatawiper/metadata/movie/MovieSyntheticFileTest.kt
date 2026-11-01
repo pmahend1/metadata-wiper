@@ -184,20 +184,11 @@ class MovieSyntheticFileTest {
         assertRejected(movie.build().bytes)
     }
 
-    // A fragment could point at the trailer, and fragments aren't resolved until sample zeroing lands.
     @Test
-    fun refusesFragmentedFilesWithTrailers() {
-        val movie = MovieBuilder(listOf(video()))
-        movie.topLevelExtras = listOf(box("moof", fullBox("mfhd", 0, 0, u32(1))))
-        movie.trailing = ByteArray(12)
-        assertUnsupported(movie.build().bytes, UnsupportedReason.NotYetSupported)
-    }
-
-    @Test
-    fun freesUnknownBoxesInFragmentsWithoutCuttingAnything() {
+    fun freesUnknownBoxesInFragments() {
         val movie = MovieBuilder(listOf(video()))
         val traf = box("traf", fullBox("tfhd", 0, 0, u32(1)), box("uuid", ByteArray(16) { 2 }, secret))
-        movie.topLevelExtras = listOf(box("moof", fullBox("mfhd", 0, 0, u32(1)), traf), box("uuid", ByteArray(16) { 2 }, secret))
+        movie.topLevelExtras = listOf(box("moof", fullBox("mfhd", 0, 0, u32(1)), traf), box("mfra", ByteArray(8)))
         val input = movie.build().bytes
 
         val output = harness.strip(input).first
@@ -208,14 +199,6 @@ class MovieSyntheticFileTest {
     // endregion End of file
 
     // region Tracks
-
-    @Test
-    fun refusesTracksWhoseSamplesHoldMetadata() {
-        val refused = listOf(track("meta", "gpmd"), track("camm", "camm"), track("meta", "mebx"), track("vide", "rtmd"), track("tmcd", "tmcd"))
-        for (extra in refused) {
-            assertUnsupported(MovieBuilder(listOf(video(), extra)).build().bytes, UnsupportedReason.NotYetSupported)
-        }
-    }
 
     @Test
     fun warnsAboutKeptTracks() {

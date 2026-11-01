@@ -72,7 +72,10 @@ object StructuralLabel {
                                                        MetadataLabel.TRACK_TIMESTAMPS to R.string.label_track_timestamps,
                                                        MetadataLabel.VENDOR_DATA to R.string.label_vendor_data,
                                                        MetadataLabel.LEFTOVER_DATA to R.string.label_leftover_data,
-                                                       MetadataLabel.SAMSUNG_TRAILER to R.string.label_samsung_trailer)
+                                                       MetadataLabel.SAMSUNG_TRAILER to R.string.label_samsung_trailer,
+                                                       MetadataLabel.TELEMETRY_TRACK to R.string.label_telemetry_track,
+                                                       MetadataLabel.TIMECODE to R.string.label_timecode,
+                                                       MetadataLabel.UNREFERENCED_DATA to R.string.label_unreferenced_data)
 
     private val notes = mapOf(MetadataLabel.LINKED_PROFILE_PATH to R.string.note_linked_profile)
 

@@ -14,6 +14,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FreedBox
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.ItemLocation
+import com.prateekmahendrakar.metadatawiper.metadata.movie.MovieStripPlanner
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
 import java.nio.ByteOrder
 
@@ -70,7 +71,6 @@ class HeifStripPlanner(private val reader: BinaryReader,
     companion object {
         val THUMBNAIL_WARNING = MetadataWarning(MetadataWarningKind.ThumbnailKept)
         val AUXILIARY_WARNING = MetadataWarning(MetadataWarningKind.AuxiliaryImagesKept)
-        val SEQUENCE_WARNING = MetadataWarning(MetadataWarningKind.SequenceTimestampsKept)
 
         private const val FTYP = "ftyp"
         private const val META = "meta"
@@ -117,7 +117,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
         val meta = HeifMetaReader(reader, boxReader).read(metaBox(topLevel))
         val mediaData = topLevel.filter { it.type == MDAT }.map { FileSpan(it.dataStart, it.end) }
 
-        planTopLevel(topLevel)
+        planTopLevel(topLevel, mediaData)
         planMetaChildren(meta)
         planItems(meta, mediaData)
         planProperties(meta)
@@ -141,18 +141,30 @@ class HeifStripPlanner(private val reader: BinaryReader,
 
     // region Boxes
 
-    private fun planTopLevel(topLevel: List<Box>) {
+    private fun planTopLevel(topLevel: List<Box>,
+                             mediaData: List<FileSpan>) {
         for (box in topLevel) {
             when (box.type) {
                 in keptTopLevelTypes -> continue
-                MOOV -> {
-                    hasMovie = true
-                    warnings += SEQUENCE_WARNING
-                }
+                MOOV -> planMovie(box, mediaData)
                 MOTION_PHOTO_VIDEO -> removeTopLevelBox(box, MetadataCategory.EmbeddedMedia, MetadataLabel.MOTION_PHOTO_VIDEO)
                 else -> removeTopLevelBox(box, MetadataCategory.Other, MetadataLabel.UNKNOWN_BOX, box.type)
             }
         }
+    }
+
+    // An image sequence is a movie, so its `moov` gets the same treatment as a video's. The chunks count as image data.
+    private fun planMovie(moov: Box,
+                          mediaData: List<FileSpan>) {
+        if (hasMovie) {
+            throw MalformedFileException("HEIF file has more than one 'moov' box")
+        }
+        hasMovie = true
+        val plan = MovieStripPlanner(reader).planMovieBox(moov, mediaData)
+        items += plan.items
+        warnings += plan.warnings
+        blanked += plan.blanked
+        imageData += plan.keptChunks
     }
 
     private fun planMetaChildren(meta: HeifMeta) {
@@ -433,10 +445,9 @@ class HeifStripPlanner(private val reader: BinaryReader,
                 throw MalformedFileException("HEIF metadata at offset ${next.span.start} overlaps other metadata")
             }
         }
-        for (range in sorted) {
-            if (imageData.any { it.overlaps(range.span) }) {
-                throw MalformedFileException("HEIF metadata at offset ${range.span.start} overlaps image data")
-            }
+        val overlapped = FileSpan.firstOverlap(sorted.map { it.span }, imageData)
+        if (overlapped != null) {
+            throw MalformedFileException("HEIF metadata at offset ${overlapped.start} overlaps image data")
         }
         return sorted
     }

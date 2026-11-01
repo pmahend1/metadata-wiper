@@ -66,6 +66,9 @@ object MetadataLabel {
     const val VENDOR_DATA = "Vendor data"
     const val LEFTOVER_DATA = "Leftover data"
     const val SAMSUNG_TRAILER = "Samsung trailer"
+    const val TELEMETRY_TRACK = "Telemetry track"
+    const val TIMECODE = "Timecode"
+    const val UNREFERENCED_DATA = "Unreferenced data"
 
     val all = listOf(EXIF_BLOCK,
                      XMP,
@@ -123,7 +126,10 @@ object MetadataLabel {
                      TRACK_TIMESTAMPS,
                      VENDOR_DATA,
                      LEFTOVER_DATA,
-                     SAMSUNG_TRAILER)
+                     SAMSUNG_TRAILER,
+                     TELEMETRY_TRACK,
+                     TIMECODE,
+                     UNREFERENCED_DATA)
 
     // endregion State
 }

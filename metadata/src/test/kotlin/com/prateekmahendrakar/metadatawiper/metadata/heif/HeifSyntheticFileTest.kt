@@ -19,6 +19,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.isobmff.TestBoxes.fullBox
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.TestBoxes.u16
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.TestBoxes.u32
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.TestBoxes.u64
+import com.prateekmahendrakar.metadatawiper.metadata.movie.MovieBuilder
+import com.prateekmahendrakar.metadatawiper.metadata.movie.MovieTestTrack
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.TiffBuilder
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.TiffTag
@@ -39,7 +41,7 @@ class HeifSyntheticFileTest {
     private val exif = u32(6) + "Exif".toByteArray() + ByteArray(2) +
                        TiffBuilder(ByteOrder.BIG_ENDIAN).let { it.build(listOf(it.ascii(TiffTag.MAKE, "Synthetic Co"))) }
 
-    private val moov = box("moov", ByteArray(8))
+    private val moov = box("moov")
 
     private val xmp = "<x:xmpmeta xmlns:x='adobe:ns:meta/'><rdf:RDF><dc:creator>Jane</dc:creator></rdf:RDF></x:xmpmeta>".toByteArray()
 
@@ -152,19 +154,48 @@ class HeifSyntheticFileTest {
                                     box("auxl", u16(3), u16(1), u16(1)),
                                     box("auxl", u16(4), u16(1), u16(1)))
         builder.extraMetaBoxes = listOf(box("fooo", ByteArray(2)))
-        builder.trailingBoxes = listOf(box("moov", ByteArray(8)))
+        builder.trailingBoxes = listOf(moov)
         val input = builder.build()
 
         val result = harness.inspect(input)
         assertEquals(emptyList<MetadataItem>(), result.items)
-        assertEquals(listOf(HeifStripPlanner.SEQUENCE_WARNING,
-                            MetadataWarning(MetadataWarningKind.UnknownBoxesKept, listOf("fooo")),
+        assertEquals(listOf(MetadataWarning(MetadataWarningKind.UnknownBoxesKept, listOf("fooo")),
                             MetadataWarning(MetadataWarningKind.UnknownItemTypesKept, listOf("abcd")),
                             MetadataWarning(MetadataWarningKind.UnknownPropertiesKept, listOf("zzzz")),
                             HeifStripPlanner.THUMBNAIL_WARNING,
                             HeifStripPlanner.AUXILIARY_WARNING),
                      result.warnings)
         assertArrayEquals(input, harness.strip(input).first)
+    }
+
+    @Test
+    fun cleansTheMovieInAnImageSequence() {
+        val sequence = MovieBuilder(listOf(MovieTestTrack("pict", "hvc1", emptyList())))
+        sequence.headerTime = 0x1234_5678
+        sequence.moovExtras = listOf(box("udta", box("©mod", u16(4), u16(0), "Jane".toByteArray())))
+        val builder = HeifBuilder(listOf(imageItem()))
+        builder.trailingBoxes = listOf(sequence.movieBox())
+        val input = builder.build()
+
+        val result = harness.inspect(input)
+        assertEquals(emptyList<MetadataWarning>(), result.warnings)
+        harness.assertHas(result.items, MetadataCategory.Device, "Model", "Jane")
+        harness.assertHas(result.items, MetadataCategory.DateTime, "Track timestamps", "1")
+        assertTrue(result.items.any { it.label == "Creation time" })
+
+        val output = harness.strip(input).first
+        assertEquals(input.size, output.size)
+        assertEquals(-1, output.indexOf("Jane".toByteArray()))
+        assertEquals(-1, output.indexOf(u32(0x1234_5678)))
+        assertEquals(emptyList<MetadataItem>(), harness.inspect(output).items)
+        assertArrayEquals(output, harness.strip(output).first)
+    }
+
+    @Test
+    fun rejectsSequencesWithTwoMovies() {
+        val builder = HeifBuilder(listOf(imageItem()))
+        builder.trailingBoxes = listOf(moov, moov)
+        assertThrows(MalformedFileException::class.java) { harness.inspect(builder.build()) }
     }
 
     @Test

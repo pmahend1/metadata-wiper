@@ -27,6 +27,12 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
     var topLevelExtras = listOf<ByteArray>()
     var trailing = ByteArray(0)
 
+    // Goes in `mdat` after the samples, where no track references it.
+    var unreferencedMedia = ByteArray(0)
+
+    // In `mvhd`, `tkhd` and `mdhd`, as creation and modification time.
+    var headerTime = 0L
+
     // Added to every chunk offset, to point samples somewhere they shouldn't be.
     var chunkOffsetShift = 0L
 
@@ -58,17 +64,20 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
                     continue
                 }
                 val bytes = concat(*track.chunks[chunk].toTypedArray())
-                offsets[index][chunk] = position + chunkOffsetShift
+                offsets[index][chunk] = position + chunkOffsetShift + track.offsetShift
                 spans[index][chunk] = FileSpan(position, position + bytes.size)
                 payload += bytes
                 position += bytes.size
             }
         }
 
-        val mediaPayload = concat(*payload.toTypedArray())
+        val mediaPayload = concat(*payload.toTypedArray(), unreferencedMedia)
         val mdat = if (largeMediaData) largeBox("mdat", mediaPayload) else box("mdat", mediaPayload)
         return BuiltMovie(concat(ftyp, moov(offsets), mdat, *topLevelExtras.toTypedArray(), trailing), spans)
     }
+
+    // Just the `moov`, for a file built around it. Only sensible with tracks that have no chunks.
+    fun movieBox(): ByteArray = moov(placeholderOffsets())
 
     private fun placeholderOffsets(): List<LongArray> = tracks.map { LongArray(it.chunks.size) }
 
@@ -79,7 +88,7 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
 
     private fun mvhd(): ByteArray {
         return fullBox("mvhd", 0, 0,
-                       u32(0), u32(0), u32(TIMESCALE), u32(0),
+                       u32(headerTime), u32(headerTime), u32(TIMESCALE), u32(0),
                        u32(0x00010000), u16(0x0100), ByteArray(10),
                        identityMatrix, ByteArray(24),
                        u32(tracks.size + 1L))
@@ -89,10 +98,10 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
                      track: MovieTestTrack,
                      offsets: LongArray): ByteArray {
         val tkhd = fullBox("tkhd", 0, 7,
-                           u32(0), u32(0), u32(trackId.toLong()), u32(0), u32(0),
+                           u32(headerTime), u32(headerTime), u32(trackId.toLong()), u32(0), u32(0),
                            ByteArray(8), u16(0), u16(0), u16(0), u16(0),
                            identityMatrix, u32(0), u32(0))
-        val mdhd = fullBox("mdhd", 0, 0, u32(0), u32(0), u32(TIMESCALE), u32(0), u16(0x55C4), u16(0))
+        val mdhd = fullBox("mdhd", 0, 0, u32(headerTime), u32(headerTime), u32(TIMESCALE), u32(0), u16(0x55C4), u16(0))
         val hdlr = fullBox("hdlr", 0, 0, u32(0), ascii(track.handler), ByteArray(12), cString(""))
         val minf = box("minf", stbl(track, offsets), *track.minfExtras.toTypedArray())
         return box("trak", tkhd, box("mdia", mdhd, hdlr, minf), *track.trakExtras.toTypedArray())
@@ -101,13 +110,14 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
     private fun stbl(track: MovieTestTrack,
                      offsets: LongArray): ByteArray {
         val samples = track.chunks.flatten()
-        val sampleEntry = box(track.sampleFormat, ByteArray(6), u16(1))
+        val sampleEntry = box(track.sampleFormat, ByteArray(6), u16(1), track.sampleEntryExtras)
         return box("stbl",
                    fullBox("stsd", 0, 0, u32(1), sampleEntry),
                    fullBox("stts", 0, 0, u32(1), u32(samples.size.toLong()), u32(1)),
                    stsc(track),
                    chunkOffsets(track, offsets),
-                   sampleSizes(track, samples))
+                   sampleSizes(track, samples),
+                   *track.stblExtras.toTypedArray())
     }
 
     // One entry per change in samples-per-chunk, as writers compress it.

@@ -10,15 +10,15 @@ enum class MetadataWarningKind {
     // Depth maps, HDR gain maps and other auxiliary images apart from alpha.
     AuxiliaryImagesKept,
 
-    // An image sequence's track timestamps, until video support lands.
-    SequenceTimestampsKept,
-
     // Subtitles are content, but some drones write per-frame GPS into a subtitle track.
     SubtitleTracksKept,
     ChaptersKept,
 
     // A camera known to write the date and location into the video stream itself, which isn't parsed yet.
     InStreamMetadataNotChecked,
+
+    // Bytes in `mdat` that no track references, in a file with other structures that might. Its one type is the size in bytes.
+    UnreferencedDataKept,
     UnknownBoxesKept,
     UnknownItemTypesKept,
     UnknownPropertiesKept,
