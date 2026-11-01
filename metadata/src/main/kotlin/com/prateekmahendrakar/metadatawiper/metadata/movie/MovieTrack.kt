@@ -22,7 +22,8 @@ class MovieTrack(val box: Box,
         val timedMetadataFormats = setOf("gpmd", "camm", "mebx", "rtmd", "djmd", "mett", "metx", "urim", "fdsc")
         val textHandlers = setOf("sbtl", "text", "subt", "clcp")
 
-        const val VIDEO = "vide"
+        val videoHandlers = setOf("vide", "pict", "auxv")
+
         const val AUDIO = "soun"
         const val TIMECODE = "tmcd"
         const val HINT = "hint"
@@ -38,7 +39,7 @@ class MovieTrack(val box: Box,
         return when {
             handlerType in timedMetadataHandlers || formats.any { it in timedMetadataFormats } -> TrackKind.TimedMetadata
             handlerType == TIMECODE || TIMECODE in formats -> TrackKind.Timecode
-            handlerType == VIDEO -> TrackKind.Video
+            handlerType in videoHandlers -> TrackKind.Video
             handlerType == AUDIO -> TrackKind.Audio
             handlerType in textHandlers -> if (id in chapterTargets) TrackKind.Chapter else TrackKind.Subtitle
             handlerType == HINT -> TrackKind.Hint

@@ -23,9 +23,10 @@ import java.time.Instant
  * size, and timestamps and names are zeroed in place. The one exception is the end of the file,
  * where a trailer and removed boxes can be cut off (see outputLength).
  *
- * Each level of the box tree has an allowlist, and anything else is freed. Timed-metadata and
- * timecode tracks fail the file for now: their samples hold what we're here to remove, and
- * freeing the `trak` alone would leave them readable in `mdat`.
+ * Each level of the box tree has an allowlist, and anything else is freed. Timed-metadata tracks
+ * are freed and timecode tracks kept, and both have their samples zeroed in `mdat`, where they'd
+ * otherwise stay readable. So do bytes in `mdat` that no track references, as long as every
+ * structure that can point there is understood (see planGaps).
  */
 class MovieStripPlanner(private val reader: BinaryReader) {
 
@@ -34,19 +35,24 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     private val boxReader = BoxReader(reader)
     private val trackReader = MovieTrackReader(reader, boxReader)
     private val metadataReader = MovieMetadataReader(reader, boxReader)
+    private val fragmentReader = MovieFragmentReader(reader, boxReader)
 
     private val items = mutableListOf<MetadataItem>()
     private val warnings = linkedSetOf<MetadataWarning>()
     private val blanked = mutableListOf<BlankedRange>()
     private val removedTopLevel = mutableSetOf<Box>()
     private val unknownHandlers = linkedSetOf<String>()
-    private var hasFragments = false
+    private val keptChunks = mutableListOf<FileSpan>()
+    private val zeroedChunks = mutableListOf<FileSpan>()
+    private var hasAuxiliaryOffsets = false
+    private var hasShortChunks = false
     private var timestampedTracks = 0
     private var trackTimestampBytes = 0L
+    private var producerTimeBytes = 0L
 
     private val paddingTypes = setOf(FREE, SKIP, WIDE)
 
-    private val keptTopLevelTypes = setOf(FTYP, MDAT, MOOV, MOOF, "mfra", "sidx", "ssix", "styp", "prft", "emsg", "pdin")
+    private val keptTopLevelTypes = setOf(FTYP, MDAT, MOOV, MOOF, "mfra", "sidx", "ssix", "styp", "emsg", "pdin")
 
     private val keptMovieTypes = setOf(MVHD, TRAK, "mvex", "iods")
 
@@ -70,6 +76,12 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         const val MOOV = "moov"
         const val MOOF = "moof"
         const val TRAF = "traf"
+        const val TREF = "tref"
+        const val MVEX = "mvex"
+        const val PRFT = "prft"
+        const val SAIO = "saio"
+        const val RTMD = "rtmd"
+        const val TMCD = "tmcd"
         const val FREE = "free"
         const val SKIP = "skip"
         const val WIDE = "wide"
@@ -96,9 +108,17 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         const val V1_TIME_SIZE = 8L
         const val BRAND_SIZE = 4
         const val MINOR_VERSION_SIZE = 4L
+        const val TRACK_ID_SIZE = 4L
+        const val NTP_TIME_SIZE = 8L
 
         // After `hdlr`'s version and flags: component type, handler type, and 12 reserved bytes.
         const val HANDLER_NAME_OFFSET = 20L
+
+        // A timecode sample entry's fixed fields; a `name` box with the reel name can follow them.
+        const val TIMECODE_ENTRY_SIZE = 26L
+
+        // QuickTime PCM's "one frame" sample size, which doesn't describe the bytes a chunk holds.
+        const val FRAME_SIZED_SAMPLE = 1L
 
         // Sample entry header (8 bytes) then the visual fields before compressorname, per ISO 14496-12.
         const val COMPRESSOR_NAME_OFFSET = 42L
@@ -116,19 +136,26 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     fun plan(): MovieStripPlan {
         val topLevel = boxReader.readTopLevel()
         val movie = movieBox(topLevel.boxes)
-        val movieChildren = boxReader.readChildren(movie)
-        rejectUnreadableMovie(movieChildren)
-        val tracks = movieChildren.filter { it.type == TRAK }.map { trackReader.read(it) }
-        val chunks = tracks.flatMap { it.sampleTable.chunks }.filter { it.length > 0 }
+        val mediaData = topLevel.boxes.filter { it.type == MDAT }.map { FileSpan(it.dataStart, it.end) }
 
         planInStreamWarning(topLevel.boxes)
-        planTopLevel(topLevel.boxes, movieChildren, tracks)
-        planTrailing(topLevel.trailing, chunks)
-        addTrackSummaries()
+        planMovie(movie, topLevel.boxes.filter { it.type == MOOF }, mediaData)
+        planTopLevel(topLevel.boxes)
+        planTrailing(topLevel.trailing, keptChunks + zeroedChunks)
+        planGaps(mediaData, topLevel.boxes)
+        addSummaries()
 
-        val outputLength = outputLength(topLevel, chunks)
-        val blankedRanges = checkedBlanked(chunks)
-        return MovieStripPlan(items.toList(), warnings.toList(), blankedRanges.filter { it.span.start < outputLength }, outputLength)
+        val outputLength = outputLength(topLevel)
+        val blankedRanges = checkedBlanked()
+        return MovieStripPlan(items.toList(), warnings.toList(), blankedRanges.filter { it.span.start < outputLength }, outputLength, keptChunks.toList())
+    }
+
+    // Plans just a `moov`, for a container that has its own idea of what else is in the file (a HEIF image sequence).
+    fun planMovieBox(moov: Box,
+                     mediaData: List<FileSpan>): MovieStripPlan {
+        planMovie(moov, emptyList(), mediaData)
+        addSummaries()
+        return MovieStripPlan(items.toList(), warnings.toList(), checkedBlanked(), reader.size, keptChunks.toList())
     }
 
     private fun movieBox(topLevel: List<Box>): Box {
@@ -170,13 +197,10 @@ class MovieStripPlanner(private val reader: BinaryReader) {
 
     // region Boxes
 
-    private fun planTopLevel(topLevel: List<Box>,
-                             movieChildren: List<Box>,
-                             tracks: List<MovieTrack>) {
+    private fun planTopLevel(topLevel: List<Box>) {
         for (box in topLevel) {
             when (box.type) {
-                MOOV -> planMovie(movieChildren, tracks)
-                MOOF -> planFragment(box)
+                PRFT -> planProducerTime(box)
                 in keptTopLevelTypes -> continue
                 in paddingTypes -> planPadding(box)
                 else -> {
@@ -236,13 +260,34 @@ class MovieStripPlanner(private val reader: BinaryReader) {
 
     // region Movie
 
-    private fun planMovie(movieChildren: List<Box>,
-                          tracks: List<MovieTrack>) {
+    private fun planMovie(moov: Box,
+                          moofs: List<Box>,
+                          mediaData: List<FileSpan>) {
+        val movieChildren = boxReader.readChildren(moov)
+        rejectUnreadableMovie(movieChildren)
+        val tracks = movieChildren.filter { it.type == TRAK }.map { trackReader.read(it) }
+        val trackExtends = movieChildren.filter { it.type == MVEX }.flatMap { fragmentReader.readTrackExtends(it) }
+        val defaultSizes = trackExtends.associate { it.trackId to it.defaultSampleSize }
+        val fragments = moofs.map { it to fragmentReader.read(it, defaultSizes) }
+        val runs = fragments.flatMap { it.second }.groupBy({ it.trackId }, { it.runs })
+
+        val unknownTrack = runs.keys.firstOrNull { id -> tracks.none { it.id == id } }
+        if (unknownTrack != null) {
+            throw MalformedFileException("Fragment of track $unknownTrack, which the movie doesn't have")
+        }
+
         movieChildren.filter { it.type == MVHD }.forEach { planMovieHeader(it) }
 
         val chapterTargets = tracks.flatMap { it.chapterTrackIds }.toSet()
-        tracks.forEach { planTrack(it, chapterTargets) }
+        val removedIds = tracks.filter { it.kind(chapterTargets) == TrackKind.TimedMetadata }.map { it.id }.toSet()
+        for (track in tracks) {
+            val chunks = (track.sampleTable.chunks + runs[track.id].orEmpty().flatten()).filter { it.length > 0 }
+            planTrack(track, chunks, chapterTargets, removedIds)
+        }
+        trackExtends.filter { it.trackId in removedIds }.forEach { blanked += FreedBox.ranges(it.box) }
+        fragments.forEach { (moof, trackFragments) -> planFragment(moof, trackFragments, removedIds) }
         planChildren(movieChildren, keptMovieTypes)
+        planZeroedChunks(mediaData)
     }
 
     private fun planMovieHeader(mvhd: Box) {
@@ -285,11 +330,37 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         return if (epochSeconds > MAX_EPOCH_SECONDS) "" else Instant.ofEpochSecond(epochSeconds).toString()
     }
 
-    private fun planFragment(moof: Box) {
-        hasFragments = true
-        val children = boxReader.readChildren(moof)
-        children.filter { it.type == TRAF }.forEach { planChildren(boxReader.readChildren(it), keptFragmentTrackTypes) }
-        planChildren(children, keptFragmentTypes)
+    private fun planFragment(moof: Box,
+                             fragments: List<TrackFragment>,
+                             removedIds: Set<Long>) {
+        for ((previous, next) in fragments.zipWithNext()) {
+            if (previous.trackId in removedIds && next.trackId !in removedIds && next.followsPreviousFragment) {
+                throw UnsupportedFileException(UnsupportedReason.NotYetSupported, "Track ${next.trackId}'s fragment depends on a removed one")
+            }
+        }
+        for (fragment in fragments) {
+            if (fragment.trackId in removedIds) {
+                blanked += FreedBox.ranges(fragment.box)
+                continue
+            }
+            val children = boxReader.readChildren(fragment.box)
+            hasAuxiliaryOffsets = hasAuxiliaryOffsets || children.any { it.type == SAIO }
+            planChildren(children, keptFragmentTrackTypes)
+        }
+        planChildren(boxReader.readChildren(moof), keptFragmentTypes)
+    }
+
+    // The NTP wall-clock time of a capture. Only low-latency players read it, and for latency, so zero costs nothing.
+    private fun planProducerTime(prft: Box) {
+        val start = boxReader.fullBoxDataStart(prft) + TRACK_ID_SIZE
+        if (prft.end - start < NTP_TIME_SIZE) {
+            throw MalformedFileException("'prft' box at offset ${prft.start} is too short")
+        }
+        val range = BlankedRange(FileSpan(start, start + NTP_TIME_SIZE))
+        blanked += range
+        if (range.isAlreadyBlank(reader) == false) {
+            producerTimeBytes += range.span.length
+        }
     }
 
     // endregion Movie
@@ -297,17 +368,27 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     // region Tracks
 
     private fun planTrack(track: MovieTrack,
-                          chapterTargets: Set<Long>) {
+                          chunks: List<FileSpan>,
+                          chapterTargets: Set<Long>,
+                          removedIds: Set<Long>) {
         val kind = track.kind(chapterTargets)
+        if (kind == TrackKind.TimedMetadata) {
+            planTelemetry(track, chunks)
+            return
+        }
+
+        if (kind == TrackKind.Timecode) {
+            planTimecode(track, chunks)
+        } else {
+            keptChunks += chunks
+            hasShortChunks = hasShortChunks || track.sampleTable.constantSampleSize == FRAME_SIZED_SAMPLE
+        }
         when (kind) {
-            TrackKind.TimedMetadata, TrackKind.Timecode -> {
-                throw UnsupportedFileException(UnsupportedReason.NotYetSupported, "Track ${track.id} is a $kind track")
-            }
             TrackKind.Subtitle -> warnings += MetadataWarning(MetadataWarningKind.SubtitleTracksKept)
             TrackKind.Chapter -> warnings += MetadataWarning(MetadataWarningKind.ChaptersKept)
             TrackKind.Unknown -> unknownHandlers += track.handlerType
             TrackKind.Video -> track.sampleEntries.forEach { planCompressorName(it) }
-            TrackKind.Audio, TrackKind.Hint -> Unit
+            else -> Unit
         }
 
         val children = boxReader.readChildren(track.box)
@@ -316,7 +397,59 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         val spans = headers.flatMap { timeSpans(it).toList() }
         planTrackTimes(spans)
         children.filter { it.type == MDIA }.forEach { planMedia(it) }
+        children.filter { it.type == TREF }.forEach { planReferences(it, removedIds) }
         planChildren(children, keptTrackTypes)
+    }
+
+    // The whole `trak` goes, but its samples would stay readable in `mdat` to anything that scans for them.
+    private fun planTelemetry(track: MovieTrack,
+                              chunks: List<FileSpan>) {
+        val formats = track.sampleEntries.map { it.type }
+        if (RTMD in formats) {
+            warnings += MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked)
+        }
+        val format = formats.firstOrNull() ?: track.handlerType
+        items += MetadataItem(MetadataCategory.Location, MetadataLabel.TELEMETRY_TRACK, format, chunks.sumOf { it.length })
+        blanked += FreedBox.ranges(track.box)
+        zeroedChunks += chunks
+    }
+
+    // The start timecode is often the time of day. All zeros is a valid 00:00:00:00, and reel names are never read back.
+    private fun planTimecode(track: MovieTrack,
+                             chunks: List<FileSpan>) {
+        val names = track.sampleEntries.filter { it.type == TMCD && it.end - it.dataStart > TIMECODE_ENTRY_SIZE }
+                                       .map { BlankedRange(FileSpan(it.dataStart + TIMECODE_ENTRY_SIZE, it.end)) }
+        blanked += names
+        zeroedChunks += chunks
+
+        val found = (FileSpan.merged(chunks).map { BlankedRange(it) } + names).filter { it.isAlreadyBlank(reader) == false }
+        if (found.isNotEmpty()) {
+            items += MetadataItem(MetadataCategory.DateTime, MetadataLabel.TIMECODE, byteSize = found.sumOf { it.span.length })
+        }
+    }
+
+    // A reference to a freed track would dangle, and readers can refuse a file over that.
+    private fun planReferences(tref: Box,
+                               removedIds: Set<Long>) {
+        for (reference in boxReader.readChildren(tref)) {
+            reader.seek(reference.dataStart)
+            val idCount = (reference.end - reference.dataStart) / TRACK_ID_SIZE
+            if ((0 until idCount).any { reader.readU32() in removedIds }) {
+                blanked += FreedBox.ranges(reference)
+            }
+        }
+    }
+
+    // Merged, because tracks that share a chunk are fine as long as neither is kept. Blanking outside `mdat` could hit structure.
+    private fun planZeroedChunks(mediaData: List<FileSpan>) {
+        for (span in FileSpan.merged(zeroedChunks)) {
+            val index = mediaData.binarySearchBy(span.start) { it.start }
+            val container = mediaData.getOrNull(if (index >= 0) index else -index - 2)
+            if (container == null || container.contains(span) == false) {
+                throw MalformedFileException("Removed samples at offset ${span.start} aren't in the media data")
+            }
+            blanked += BlankedRange(span)
+        }
     }
 
     private fun planTrackTimes(spans: List<FileSpan>) {
@@ -338,8 +471,14 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     private fun planMediaInfo(minf: Box) {
         val children = boxReader.readChildren(minf)
         children.filter { it.type == HDLR }.forEach { planHandlerName(it) }
-        children.filter { it.type == STBL }.forEach { planChildren(boxReader.readChildren(it), keptSampleTableTypes) }
+        children.filter { it.type == STBL }.forEach { planSampleTable(it) }
         planChildren(children, keptMediaInfoTypes)
+    }
+
+    private fun planSampleTable(stbl: Box) {
+        val children = boxReader.readChildren(stbl)
+        hasAuxiliaryOffsets = hasAuxiliaryOffsets || children.any { it.type == SAIO }
+        planChildren(children, keptSampleTableTypes)
     }
 
     /*
@@ -373,9 +512,12 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         items += MetadataItem(MetadataCategory.Software, MetadataLabel.COMPRESSOR_NAME, name, COMPRESSOR_NAME_SIZE.toLong())
     }
 
-    private fun addTrackSummaries() {
+    private fun addSummaries() {
         if (timestampedTracks > 0) {
             items += MetadataItem(MetadataCategory.DateTime, MetadataLabel.TRACK_TIMESTAMPS, timestampedTracks.toString(), trackTimestampBytes)
+        }
+        if (producerTimeBytes > 0) {
+            items += MetadataItem(MetadataCategory.DateTime, MetadataLabel.TIMESTAMP, byteSize = producerTimeBytes)
         }
         if (unknownHandlers.isNotEmpty()) {
             warnings += MetadataWarning(MetadataWarningKind.UnknownTracksKept, unknownHandlers.toList())
@@ -384,12 +526,61 @@ class MovieStripPlanner(private val reader: BinaryReader) {
 
     // endregion Tracks
 
-    // region End of file
+    // region Media data
 
     /*
-     * Data after the last box is cut off, which is only safe if nothing reads it. Fragments can
-     * point there and aren't resolved yet, so they fail the file rather than risk the video.
+     * Whatever no track references is a leftover: removed telemetry, a dashcam's GPS blocks, data
+     * an editor orphaned. "Referenced" is only as good as our list of what can point into `mdat`,
+     * so with `saio` offsets, an `iloc`, or chunk spans known to be too short, the gaps may not
+     * be gaps. Those files keep them, and a warning says so, because zeroing by guess could
+     * destroy samples.
      */
+    private fun planGaps(mediaData: List<FileSpan>,
+                         topLevel: List<Box>) {
+        val found = gaps(mediaData, FileSpan.merged(keptChunks + zeroedChunks)).map { BlankedRange(it) }.filter { it.isAlreadyBlank(reader) == false }
+        if (found.isEmpty()) {
+            return
+        }
+        val size = found.sumOf { it.span.length }
+        val hasItemLocations = topLevel.any { it.type == META && metadataReader.hasItemLocations(it) }
+        if (hasAuxiliaryOffsets || hasShortChunks || hasItemLocations) {
+            warnings += MetadataWarning(MetadataWarningKind.UnreferencedDataKept, listOf(size.toString()))
+            return
+        }
+        blanked += found
+        items += MetadataItem(MetadataCategory.Other, MetadataLabel.UNREFERENCED_DATA, byteSize = size)
+    }
+
+    // Both lists are sorted, so one sweep finds what's in [mediaData] but not in [referenced].
+    private fun gaps(mediaData: List<FileSpan>,
+                     referenced: List<FileSpan>): List<FileSpan> {
+        val gaps = mutableListOf<FileSpan>()
+        var next = 0
+        for (container in mediaData) {
+            var position = container.start
+            while (next < referenced.size && referenced[next].start < container.end) {
+                val span = referenced[next]
+                if (span.start > position) {
+                    gaps += FileSpan(position, span.start)
+                }
+                position = maxOf(position, span.end)
+                if (span.end > container.end) {
+                    break
+                }
+                next++
+            }
+            if (position < container.end) {
+                gaps += FileSpan(position, container.end)
+            }
+        }
+        return gaps
+    }
+
+    // endregion Media data
+
+    // region End of file
+
+    // Data after the last box is cut off, which is only safe if nothing reads it.
     private fun planTrailing(trailing: FileSpan?,
                              chunks: List<FileSpan>) {
         if (trailing == null) {
@@ -397,9 +588,6 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         }
         if (chunks.any { it.end > trailing.start }) {
             throw MalformedFileException("Sample data runs into the trailer at offset ${trailing.start}")
-        }
-        if (hasFragments) {
-            throw UnsupportedFileException(UnsupportedReason.NotYetSupported, "Fragmented file with a trailer at offset ${trailing.start}")
         }
         val label = if (endsWithSamsungSignature(trailing)) MetadataLabel.SAMSUNG_TRAILER else MetadataLabel.EMBEDDED_DATA
         items += MetadataItem(MetadataCategory.EmbeddedMedia, label, byteSize = trailing.length)
@@ -417,12 +605,8 @@ class MovieStripPlanner(private val reader: BinaryReader) {
      * The trailer always goes. Removed top-level boxes before it, with any padding among them,
      * are cut too instead of staying as zeroed `free` boxes, unless a sample could reach them.
      */
-    private fun outputLength(topLevel: TopLevelBoxes,
-                             chunks: List<FileSpan>): Long {
+    private fun outputLength(topLevel: TopLevelBoxes): Long {
         val boxesEnd = topLevel.trailing?.start ?: reader.size
-        if (hasFragments) {
-            return boxesEnd
-        }
         var cut = boxesEnd
         var cutsRemovedBox = false
         for (box in topLevel.boxes.asReversed()) {
@@ -433,14 +617,14 @@ class MovieStripPlanner(private val reader: BinaryReader) {
             }
             cut = box.start
         }
-        if (cutsRemovedBox == false || chunks.any { it.end > cut }) {
+        if (cutsRemovedBox == false || keptChunks.any { it.end > cut }) {
             return boxesEnd
         }
         return cut
     }
 
     // Overlapping overwrites would depend on order, and overwriting a sample would corrupt the video.
-    private fun checkedBlanked(chunks: List<FileSpan>): List<BlankedRange> {
+    private fun checkedBlanked(): List<BlankedRange> {
         val sorted = blanked.filter { it.span.length > 0 }.sortedBy { it.span.start }
         for ((previous, next) in sorted.zipWithNext()) {
             if (previous.span.overlaps(next.span)) {
@@ -448,18 +632,9 @@ class MovieStripPlanner(private val reader: BinaryReader) {
             }
         }
 
-        // A sweep rather than a nested loop: a long video has a million chunks.
-        val chunksByStart = chunks.sortedBy { it.start }
-        var nextChunk = 0
-        var reach = 0L
-        for (range in sorted) {
-            while (nextChunk < chunksByStart.size && chunksByStart[nextChunk].start < range.span.end) {
-                reach = maxOf(reach, chunksByStart[nextChunk].end)
-                nextChunk++
-            }
-            if (reach > range.span.start) {
-                throw MalformedFileException("Movie metadata at offset ${range.span.start} overlaps sample data")
-            }
+        val overlapped = FileSpan.firstOverlap(sorted.map { it.span }, keptChunks)
+        if (overlapped != null) {
+            throw MalformedFileException("Movie metadata at offset ${overlapped.start} overlaps sample data")
         }
         return sorted
     }

@@ -82,6 +82,7 @@ class MovieMetadataReader(private val reader: BinaryReader,
         const val HDLR = "hdlr"
         const val KEYS = "keys"
         const val ILST = "ilst"
+        const val ILOC = "iloc"
         const val FREE = "free"
         const val DATA = "data"
         const val GPS_POINT = "©xyz"
@@ -120,6 +121,15 @@ class MovieMetadataReader(private val reader: BinaryReader,
     fun isXmp(uuid: Box): Boolean {
         reader.seek(uuid.headerEnd)
         return reader.readBytes(xmpUuid.size).contentEquals(xmpUuid)
+    }
+
+    // A `meta` that can't be read might hold anything, so it counts as pointing into the media data.
+    fun hasItemLocations(meta: Box): Boolean {
+        return try {
+            boxReader.read(metaChildrenStart(meta), meta.end).any { it.type == ILOC }
+        } catch (_: MalformedFileException) {
+            true
+        }
     }
 
     // QuickTime allows a 32-bit zero after the last child, which isn't a box.
