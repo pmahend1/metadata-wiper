@@ -1,4 +1,4 @@
-package com.prateekmahendrakar.metadatawiper.metadata.isobmff
+package com.prateekmahendrakar.metadatawiper.metadata.io
 
 // Absolute file offsets; [end] is exclusive.
 data class FileSpan(val start: Long,

@@ -23,11 +23,37 @@ class FormatDetectorTest {
                           bmp(infoHeaderSize = 40) to FileFormat.Bmp,
                           bmp(infoHeaderSize = 124) to FileFormat.Bmp,
                           bytes(0x49, 0x49, 0x2A, 0x00) to FileFormat.Tiff,
-                          bytes(0x4D, 0x4D, 0x00, 0x2A) to FileFormat.Tiff)
+                          bytes(0x4D, 0x4D, 0x00, 0x2A) to FileFormat.Tiff,
+                          ftyp("isom", "isom", "iso2", "avc1", "mp41") to FileFormat.Mp4,
+                          ftyp("mp42", "mp42", "isom") to FileFormat.Mp4,
+                          ftyp("M4V ", "M4V ", "M4A ", "mp42") to FileFormat.Mp4,
+                          ftyp("XAVC", "XAVC", "mp42") to FileFormat.Mp4,
+                          ftyp("abcd", "abcd", "isom") to FileFormat.Mp4,
+                          ftyp("qt  ", "qt  ") to FileFormat.QuickTime,
+                          ftyp("abcd", "qt  ") to FileFormat.QuickTime,
+                          ftyp("3gp4", "isom", "3gp4") to FileFormat.ThreeGpp,
+                          ftyp("3g2a", "3g2a") to FileFormat.ThreeGpp,
+                          box(0x20, "moov") to FileFormat.QuickTime,
+                          box(0x08, "wide") to FileFormat.QuickTime,
+                          box(0x01, "mdat") to FileFormat.QuickTime,
+                          ebml("matroska") to FileFormat.Matroska,
+                          ebml("webm") to FileFormat.WebM,
+                          ebml("webm", padding = 2) to FileFormat.WebM,
+                          ascii("RIFF") + bytes(0x24, 0, 0, 0) + ascii("AVI LIST") to FileFormat.Avi,
+                          bytes(0x00, 0x00, 0x01, 0xBA, 0x44) to FileFormat.MpegPs,
+                          transportStream(packetSize = 188, syncOffset = 0) to FileFormat.MpegTs,
+                          transportStream(packetSize = 192, syncOffset = 4) to FileFormat.MpegTs)
 
         for ((header, expected) in cases) {
             assertEquals(expected, FormatDetector.detect(header))
         }
+    }
+
+    // A HEIC with an image sequence still lists video brands, but it's an image first.
+    @Test
+    fun prefersImageBrandsOverVideoBrands() {
+        assertEquals(FileFormat.Heif, FormatDetector.detect(ftyp("msf1", "msf1", "isom", "mp41")))
+        assertEquals(FileFormat.Avif, FormatDetector.detect(ftyp("avis", "avis", "iso8", "mp41")))
     }
 
     @Test
@@ -36,11 +62,21 @@ class FormatDetectorTest {
                            bytes(0xFF, 0xD8),
                            ascii("GIF8"),
                            ascii("RIFF") + bytes(0x24, 0, 0, 0) + ascii("WAVEfmt "),
-                           ftyp("isom", "isom", "mp41"),
-                           ftyp("qt  ", "qt  "),
                            ascii("%PDF-1.7"),
                            bmp(infoHeaderSize = 7),
-                           ascii("BM"))
+                           ascii("BM"),
+                           // Audio waits for Phase 3; CR3 raw photos share the container.
+                           ftyp("M4A ", "M4A ", "mp42", "isom"),
+                           ftyp("crx ", "crx ", "isom"),
+                           ftyp("abcd", "efgh"),
+                           box(0x04, "moov"),
+                           box(0x20, "trak"),
+                           ebml("mkv3"),
+                           ebmlWithoutDocType(),
+                           bytes(0x1A, 0x45, 0xDF, 0xA3),
+                           // A lone 0x47 is just a 'G', not a transport stream.
+                           ascii("Gx") + ByteArray(400),
+                           transportStream(packetSize = 188, syncOffset = 0).copyOf(300))
 
         for (header in cases) {
             assertEquals(FileFormat.Unknown, FormatDetector.detect(header))
@@ -70,7 +106,14 @@ class FormatDetectorTest {
                                     "heif-" to FileFormat.Heif,
                                     "avif-" to FileFormat.Avif,
                                     "gif-" to FileFormat.Gif,
-                                    "bmp-" to FileFormat.Bmp)
+                                    "bmp-" to FileFormat.Bmp,
+                                    "mp4-" to FileFormat.Mp4,
+                                    "m4v-" to FileFormat.Mp4,
+                                    "mov-" to FileFormat.QuickTime,
+                                    "3gp-" to FileFormat.ThreeGpp,
+                                    "mkv-" to FileFormat.Matroska,
+                                    "webm-" to FileFormat.WebM,
+                                    "avi-" to FileFormat.Avi)
         val fixtures = File(javaClass.getResource("/fixtures")!!.toURI()).listFiles()!!.sortedBy { it.name }
         assertTrue(fixtures.isNotEmpty())
 
@@ -86,6 +129,31 @@ class FormatDetectorTest {
         val size = 16 + compatibleBrands.size * 4
         val body = ascii("ftyp") + ascii(majorBrand) + ByteArray(4) + compatibleBrands.fold(ByteArray(0)) { all, brand -> all + ascii(brand) }
         return bytes(0, 0, 0, size) + body
+    }
+
+    private fun box(size: Int,
+                    type: String): ByteArray = bytes(0, 0, 0, size) + ascii(type) + ByteArray(8)
+
+    // EBMLVersion, then DocType, as mkvmerge and browsers write the header.
+    private fun ebml(docType: String,
+                     padding: Int = 0): ByteArray {
+        val docTypeBytes = ascii(docType) + ByteArray(padding)
+        val children = bytes(0x42, 0x86, 0x81, 0x01) + bytes(0x42, 0x82, 0x80 or docTypeBytes.size) + docTypeBytes
+        return bytes(0x1A, 0x45, 0xDF, 0xA3, 0x80 or children.size) + children + bytes(0x18, 0x53, 0x80, 0x67)
+    }
+
+    private fun ebmlWithoutDocType(): ByteArray {
+        val children = bytes(0x42, 0x86, 0x81, 0x01)
+        return bytes(0x1A, 0x45, 0xDF, 0xA3, 0x80 or children.size) + children
+    }
+
+    private fun transportStream(packetSize: Int,
+                                syncOffset: Int): ByteArray {
+        val bytes = ByteArray(packetSize * 3)
+        for (packet in 0 until 3) {
+            bytes[syncOffset + packet * packetSize] = 0x47
+        }
+        return bytes
     }
 
     private fun bmp(infoHeaderSize: Int): ByteArray = ascii("BM") + ByteArray(12) + bytes(infoHeaderSize, 0, 0, 0)

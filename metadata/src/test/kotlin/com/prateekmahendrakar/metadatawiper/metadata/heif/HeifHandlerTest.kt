@@ -6,8 +6,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.HandlerHarness
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FileSpan
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

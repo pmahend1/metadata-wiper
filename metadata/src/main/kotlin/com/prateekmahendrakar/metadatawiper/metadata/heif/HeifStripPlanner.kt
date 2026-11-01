@@ -8,10 +8,10 @@ import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarningKind
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BlankedRange
+import com.prateekmahendrakar.metadatawiper.metadata.io.BlankedRange
+import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.ItemLocation
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
 import java.nio.ByteOrder

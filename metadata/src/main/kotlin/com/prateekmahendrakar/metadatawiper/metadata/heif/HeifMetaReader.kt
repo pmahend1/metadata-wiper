@@ -2,9 +2,9 @@ package com.prateekmahendrakar.metadatawiper.metadata.heif
 
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.ItemLocationReader
 import java.nio.ByteOrder
 

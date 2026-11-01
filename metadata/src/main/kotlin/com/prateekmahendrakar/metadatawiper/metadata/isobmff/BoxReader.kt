@@ -2,6 +2,7 @@ package com.prateekmahendrakar.metadatawiper.metadata.isobmff
 
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 import java.nio.ByteOrder
 
 /*
@@ -19,6 +20,10 @@ class BoxReader(private val reader: BinaryReader) {
         const val USER_TYPE_SIZE = 16L
         const val FULL_BOX_HEADER_SIZE = 4L
         const val TYPE_SIZE = 4
+        const val TYPE_OFFSET = 4L
+        const val PRINTABLE_START = 0x20
+        const val PRINTABLE_END = 0x7E
+        const val COPYRIGHT_SIGN = 0xA9
         const val LARGE_SIZE = 1L
         const val TO_END = 0L
         const val UUID = "uuid"
@@ -49,6 +54,29 @@ class BoxReader(private val reader: BinaryReader) {
         return boxes
     }
 
+    /*
+     * Like read(0, size), except that bytes after the last box which don't start with a box
+     * header are returned as a trailer instead of failing: some phones and cameras append data
+     * there (Samsung's SEFT, Insta360). A header with a plausible type but a size that doesn't
+     * fit is still corrupt, since that's what a truncated `mdat` looks like.
+     */
+    fun readTopLevel(): TopLevelBoxes {
+        val boxes = mutableListOf<Box>()
+        var position = 0L
+        while (position < reader.size) {
+            if (boxes.size == MAX_BOXES) {
+                throw MalformedFileException("More than $MAX_BOXES top-level boxes")
+            }
+            if (startsWithBoxHeader(position) == false) {
+                return TopLevelBoxes(boxes, FileSpan(position, reader.size))
+            }
+            val box = readBox(position, reader.size)
+            boxes += box
+            position = box.end
+        }
+        return TopLevelBoxes(boxes, trailing = null)
+    }
+
     fun readChildren(parent: Box): List<Box> = read(parent.dataStart, parent.end)
 
     // A full box starts with a version byte and three flag bytes before its children.
@@ -60,6 +88,18 @@ class BoxReader(private val reader: BinaryReader) {
             throw MalformedFileException("'${box.type}' box at offset ${box.start} is too short")
         }
         return box.dataStart + FULL_BOX_HEADER_SIZE
+    }
+
+    // Box types are four printable characters; QuickTime also uses '©' (0xA9) as the first one.
+    private fun startsWithBoxHeader(position: Long): Boolean {
+        if (reader.size - position < HEADER_SIZE) {
+            return false
+        }
+        reader.seek(position + TYPE_OFFSET)
+        return reader.readBytes(TYPE_SIZE).all {
+            val value = it.toInt() and 0xFF
+            value in PRINTABLE_START..PRINTABLE_END || value == COPYRIGHT_SIGN
+        }
     }
 
     private fun readBox(start: Long,

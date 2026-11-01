@@ -1,6 +1,6 @@
 package com.prateekmahendrakar.metadatawiper.metadata.heif
 
-import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FileSpan
+import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 
 // One `infe` entry. [name] spans the item name's bytes, without its terminator; [contentType] is only set for `mime` items.
 data class HeifItem(val id: Long,

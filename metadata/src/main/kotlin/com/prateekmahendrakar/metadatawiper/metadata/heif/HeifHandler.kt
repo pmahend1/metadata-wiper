@@ -6,6 +6,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.InspectionResult
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.io.BlankedCopy
 import java.io.OutputStream
 import java.nio.channels.SeekableByteChannel
 
@@ -33,14 +34,7 @@ class HeifHandler(override val format: FileFormat) : FormatHandler {
                        options: StripOptions): StripReport {
         val reader = BinaryReader(input)
         val plan = HeifStripPlanner(reader, options).plan()
-
-        var position = 0L
-        for (range in plan.blanked) {
-            reader.copyTo(output, position, range.span.start)
-            range.writeTo(output)
-            position = range.span.end
-        }
-        reader.copyTo(output, position, plan.outputLength)
+        BlankedCopy.write(reader, output, plan.blanked, plan.outputLength)
 
         // Orientation lives in the kept `irot`/`imir` properties, so no EXIF orientation is ever written.
         return StripReport.of(plan.items, plan.warnings, options, orientationWritten = false)
