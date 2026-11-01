@@ -12,7 +12,15 @@ enum class MetadataWarningKind {
 
     // An image sequence's track timestamps, until video support lands.
     SequenceTimestampsKept,
+
+    // Subtitles are content, but some drones write per-frame GPS into a subtitle track.
+    SubtitleTracksKept,
+    ChaptersKept,
+
+    // A camera known to write the date and location into the video stream itself, which isn't parsed yet.
+    InStreamMetadataNotChecked,
     UnknownBoxesKept,
     UnknownItemTypesKept,
-    UnknownPropertiesKept
+    UnknownPropertiesKept,
+    UnknownTracksKept
 }

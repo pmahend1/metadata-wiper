@@ -66,7 +66,13 @@ object StructuralLabel {
                                                        MetadataLabel.BODY_SERIAL_NUMBER to R.string.label_serial_number,
                                                        MetadataLabel.LENS_MAKE to R.string.label_lens_make,
                                                        MetadataLabel.LENS_MODEL to R.string.label_lens_model,
-                                                       MetadataLabel.LENS_SERIAL_NUMBER to R.string.label_lens_serial_number)
+                                                       MetadataLabel.LENS_SERIAL_NUMBER to R.string.label_lens_serial_number,
+                                                       MetadataLabel.TITLE to R.string.label_title,
+                                                       MetadataLabel.COMPRESSOR_NAME to R.string.label_compressor_name,
+                                                       MetadataLabel.TRACK_TIMESTAMPS to R.string.label_track_timestamps,
+                                                       MetadataLabel.VENDOR_DATA to R.string.label_vendor_data,
+                                                       MetadataLabel.LEFTOVER_DATA to R.string.label_leftover_data,
+                                                       MetadataLabel.SAMSUNG_TRAILER to R.string.label_samsung_trailer)
 
     private val notes = mapOf(MetadataLabel.LINKED_PROFILE_PATH to R.string.note_linked_profile)
 

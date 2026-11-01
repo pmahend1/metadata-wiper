@@ -60,6 +60,12 @@ object MetadataLabel {
     const val LENS_MAKE = "LensMake"
     const val LENS_MODEL = "LensModel"
     const val LENS_SERIAL_NUMBER = "LensSerialNumber"
+    const val TITLE = "Title"
+    const val COMPRESSOR_NAME = "Compressor name"
+    const val TRACK_TIMESTAMPS = "Track timestamps"
+    const val VENDOR_DATA = "Vendor data"
+    const val LEFTOVER_DATA = "Leftover data"
+    const val SAMSUNG_TRAILER = "Samsung trailer"
 
     val all = listOf(EXIF_BLOCK,
                      XMP,
@@ -111,7 +117,13 @@ object MetadataLabel {
                      BODY_SERIAL_NUMBER,
                      LENS_MAKE,
                      LENS_MODEL,
-                     LENS_SERIAL_NUMBER)
+                     LENS_SERIAL_NUMBER,
+                     TITLE,
+                     COMPRESSOR_NAME,
+                     TRACK_TIMESTAMPS,
+                     VENDOR_DATA,
+                     LEFTOVER_DATA,
+                     SAMSUNG_TRAILER)
 
     // endregion State
 }

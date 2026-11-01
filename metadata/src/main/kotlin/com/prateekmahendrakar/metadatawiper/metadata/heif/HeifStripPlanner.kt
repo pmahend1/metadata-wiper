@@ -12,6 +12,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.io.BlankedRange
 import com.prateekmahendrakar.metadatawiper.metadata.io.FileSpan
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
+import com.prateekmahendrakar.metadatawiper.metadata.isobmff.FreedBox
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.ItemLocation
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
 import java.nio.ByteOrder
@@ -93,7 +94,6 @@ class HeifStripPlanner(private val reader: BinaryReader,
         private const val XMP_CONTENT_TYPE = "application/rdf+xml"
 
         private const val SPACE = 0x20.toByte()
-        private const val TYPE_OFFSET = 4L
         private const val TYPE_SIZE = 4L
         private const val TIFF_HEADER_OFFSET_SIZE = 4L
 
@@ -103,8 +103,6 @@ class HeifStripPlanner(private val reader: BinaryReader,
 
         // An empty XMP document; the spaces that pad it to length are allowed after an XML root element.
         private val xmpBlank = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"/>".toByteArray(Charsets.US_ASCII)
-
-        private val freeType = FREE.toByteArray(Charsets.US_ASCII)
     }
 
     // endregion State
@@ -184,13 +182,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
                           label: String,
                           detail: String = "") {
         items += MetadataItem(category, label, detail, box.end - box.start)
-        blanked += freed(box)
-    }
-
-    // The same box as `free`, zeroed after its size fields, including a `uuid` box's extended type.
-    private fun freed(box: Box): List<BlankedRange> {
-        return listOf(BlankedRange(FileSpan(box.start + TYPE_OFFSET, box.start + TYPE_OFFSET + TYPE_SIZE), freeType),
-                      BlankedRange(FileSpan(box.headerEnd, box.end)))
+        blanked += FreedBox.ranges(box)
     }
 
     // endregion Boxes
@@ -398,7 +390,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
         if (options.keepColorProfile) {
             return
         }
-        blanked += freed(box)
+        blanked += FreedBox.ranges(box)
         for (association in meta.associations) {
             if (association.propertyIndex == property.index && association.isEssential) {
                 val span = FileSpan(association.flagOffset, association.flagOffset + 1)

@@ -24,7 +24,11 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
     var majorBrand = "isom"
     var largeMediaData = false
     var moovExtras = listOf<ByteArray>()
+    var topLevelExtras = listOf<ByteArray>()
     var trailing = ByteArray(0)
+
+    // Added to every chunk offset, to point samples somewhere they shouldn't be.
+    var chunkOffsetShift = 0L
 
     private companion object {
         const val TIMESCALE = 1000L
@@ -54,7 +58,7 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
                     continue
                 }
                 val bytes = concat(*track.chunks[chunk].toTypedArray())
-                offsets[index][chunk] = position
+                offsets[index][chunk] = position + chunkOffsetShift
                 spans[index][chunk] = FileSpan(position, position + bytes.size)
                 payload += bytes
                 position += bytes.size
@@ -63,7 +67,7 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
 
         val mediaPayload = concat(*payload.toTypedArray())
         val mdat = if (largeMediaData) largeBox("mdat", mediaPayload) else box("mdat", mediaPayload)
-        return BuiltMovie(concat(ftyp, moov(offsets), mdat, trailing), spans)
+        return BuiltMovie(concat(ftyp, moov(offsets), mdat, *topLevelExtras.toTypedArray(), trailing), spans)
     }
 
     private fun placeholderOffsets(): List<LongArray> = tracks.map { LongArray(it.chunks.size) }
@@ -90,7 +94,8 @@ class MovieBuilder(private val tracks: List<MovieTestTrack>) {
                            identityMatrix, u32(0), u32(0))
         val mdhd = fullBox("mdhd", 0, 0, u32(0), u32(0), u32(TIMESCALE), u32(0), u16(0x55C4), u16(0))
         val hdlr = fullBox("hdlr", 0, 0, u32(0), ascii(track.handler), ByteArray(12), cString(""))
-        return box("trak", tkhd, box("mdia", mdhd, hdlr, box("minf", stbl(track, offsets))))
+        val minf = box("minf", stbl(track, offsets), *track.minfExtras.toTypedArray())
+        return box("trak", tkhd, box("mdia", mdhd, hdlr, minf), *track.trakExtras.toTypedArray())
     }
 
     private fun stbl(track: MovieTestTrack,

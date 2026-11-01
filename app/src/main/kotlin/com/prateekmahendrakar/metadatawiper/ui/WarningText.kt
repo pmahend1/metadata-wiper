@@ -16,9 +16,13 @@ object WarningText {
             MetadataWarningKind.ThumbnailKept -> R.string.warning_thumbnail_kept
             MetadataWarningKind.AuxiliaryImagesKept -> R.string.warning_auxiliary_kept
             MetadataWarningKind.SequenceTimestampsKept -> R.string.warning_sequence_kept
+            MetadataWarningKind.SubtitleTracksKept -> R.string.warning_subtitles_kept
+            MetadataWarningKind.ChaptersKept -> R.string.warning_chapters_kept
+            MetadataWarningKind.InStreamMetadataNotChecked -> R.string.warning_in_stream_not_checked
             MetadataWarningKind.UnknownBoxesKept -> R.string.warning_unknown_boxes
             MetadataWarningKind.UnknownItemTypesKept -> R.string.warning_unknown_items
             MetadataWarningKind.UnknownPropertiesKept -> R.string.warning_unknown_properties
+            MetadataWarningKind.UnknownTracksKept -> R.string.warning_unknown_tracks
         }
     }
 
