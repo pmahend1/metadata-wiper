@@ -196,13 +196,20 @@
     <string name="failure_unexpected">Something went wrong while cleaning this file.</string>
 
     <string name="progress_file">File %1$d of %2$d · %3$s</string>
+    <string name="progress_reading">Reading</string>
     <string name="progress_cleaning">Cleaning</string>
     <string name="progress_checking">Checking</string>
     <string name="progress_saving">Saving</string>
     <string name="progress_keep_open">Keep the app open until this finishes.</string>
     <string name="progress_replacing">This can\'t be cancelled while the original is being replaced.</string>
+    <string name="add_more">Add more</string>
     <string name="cancel">Cancel</string>
     <string name="cancelling">Cancelling…</string>
+    <plurals name="loading_files">
+        <item quantity="one">Reading %d file</item>
+        <item quantity="other">Reading %d files</item>
+    </plurals>
+    <string name="loading_hint">Files in cloud storage are downloaded first, which can take a while.</string>
     <string name="space_short">Not enough free space: this needs %1$s, and %2$s is available.</string>
     <string name="space_needed">Cleaning needs about %s of free space.</string>
 

@@ -204,13 +204,21 @@
     <string name="failure_unexpected">Algo salió mal al limpiar este archivo.</string>
 
     <string name="progress_file">Archivo %1$d de %2$d · %3$s</string>
+    <string name="progress_reading">Leyendo</string>
     <string name="progress_cleaning">Limpiando</string>
     <string name="progress_checking">Comprobando</string>
     <string name="progress_saving">Guardando</string>
     <string name="progress_keep_open">Mantén la app abierta hasta que termine.</string>
     <string name="progress_replacing">No se puede cancelar mientras se reemplaza el original.</string>
+    <string name="add_more">Añadir más</string>
     <string name="cancel">Cancelar</string>
     <string name="cancelling">Cancelando…</string>
+    <plurals name="loading_files">
+        <item quantity="one">Leyendo %d archivo</item>
+        <item quantity="many">Leyendo %d archivos</item>
+        <item quantity="other">Leyendo %d archivos</item>
+    </plurals>
+    <string name="loading_hint">Los archivos en la nube se descargan primero, lo que puede tardar un rato.</string>
     <string name="space_short">No hay suficiente espacio libre: se necesitan %1$s y hay %2$s disponibles.</string>
     <string name="space_needed">La limpieza necesita unos %s de espacio libre.</string>
 

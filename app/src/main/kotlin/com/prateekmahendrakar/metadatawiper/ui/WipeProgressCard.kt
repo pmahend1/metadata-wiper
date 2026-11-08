@@ -49,6 +49,7 @@ fun WipeProgressCard(progress: WipeProgress,
 
 private fun phaseLabel(phase: WipePhase): Int {
     return when (phase) {
+        WipePhase.Reading -> R.string.progress_reading
         WipePhase.Stripping -> R.string.progress_cleaning
         WipePhase.Verifying -> R.string.progress_checking
         WipePhase.Writing -> R.string.progress_saving

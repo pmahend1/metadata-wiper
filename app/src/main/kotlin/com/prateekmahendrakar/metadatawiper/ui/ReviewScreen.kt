@@ -5,14 +5,18 @@ import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.wipe.CleanedFileName
@@ -36,7 +41,9 @@ fun ReviewScreen(state: WipeUiState,
                  onOverwrite: () -> Unit,
                  onSaveTo: (Uri) -> Unit,
                  onSaveToFolder: (Uri) -> Unit,
-                 onShare: () -> Unit) {
+                 onShare: () -> Unit,
+                 onAddFiles: (List<Uri>) -> Unit,
+                 onCancelLoading: () -> Unit) {
     val files = state.files
     val firstFile = files.first()
     val options = settings.stripOptions
@@ -57,6 +64,8 @@ fun ReviewScreen(state: WipeUiState,
                                                              onResult = { uri: Uri? -> uri?.let(onSaveTo) })
     val saveToFolderLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocumentTree(),
                                                                  onResult = { uri: Uri? -> uri?.let(onSaveToFolder) })
+    val addFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(),
+                                                             onResult = onAddFiles)
 
     val context = LocalContext.current
     val note = when {
@@ -75,8 +84,21 @@ fun ReviewScreen(state: WipeUiState,
                           IconButton(onClick = onBack, enabled = state.isBusy == false) {
                               Icon(painter = painterResource(id = R.drawable.arrow_back_24px), contentDescription = stringResource(id = R.string.back))
                           }
+                      },
+                      actions = {
+                          TextButton(onClick = { addFilesLauncher.launch(arrayOf("image/*", "video/*")) }, enabled = state.isBusy == false) {
+                              Icon(painter = painterResource(id = R.drawable.add_24px), contentDescription = null, modifier = Modifier.size(18.dp))
+                              Spacer(modifier = Modifier.width(6.dp))
+                              Text(text = stringResource(id = R.string.add_more))
+                          }
                       })
-            if (state.isBusy) {
+            val loading = state.loading
+            if (loading != null) {
+                LoadingCard(loading = loading,
+                            isCancelling = state.isCancelling,
+                            onCancel = onCancelLoading,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            } else if (state.isBusy) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }

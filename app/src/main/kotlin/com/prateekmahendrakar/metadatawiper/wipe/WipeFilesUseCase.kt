@@ -53,14 +53,25 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
 
     // region Methods
 
-    fun inspect(uri: Uri): SelectedFile {
-        val displayName = try {
-            documentStore.displayName(uri)
+    fun displayName(uri: Uri): String {
+        return try {
+            documentStore.displayName(uri).orEmpty()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    // Throws CancellationException when the monitor cancels; anything else gives an uncleanable file.
+    fun inspect(uri: Uri,
+                monitor: WipeMonitor = WipeMonitor()): SelectedFile {
+        val displayName = displayName(uri)
+        val expectedSize = try {
+            documentStore.size(uri)
         } catch (_: Exception) {
             null
         }
         return try {
-            withSeekableSource(uri) { input ->
+            withSeekableSource(uri, expectedSize ?: 0L, monitor) { input ->
                 val format = detect(input)
                 val handler = handlers.handlerFor(format)
                 var unsupportedReason = if (handler == null) reasonWithoutHandler(format) else null
@@ -72,17 +83,19 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
                 }
                 val groups = MetadataGrouping.of(inspection?.items.orEmpty(), readExifDetails(format, input))
                 SelectedFile(uri = uri,
-                             displayName = displayName ?: "",
+                             displayName = displayName,
                              format = format,
                              byteSize = input.size(),
                              inspection = inspection,
                              metadataGroups = groups,
                              unsupportedReason = unsupportedReason)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.w(TAG, "Couldn't read a selected file: ${e.javaClass.simpleName}")
             SelectedFile(uri = uri,
-                         displayName = displayName ?: "",
+                         displayName = displayName,
                          format = FileFormat.Unknown,
                          byteSize = 0,
                          inspection = null,
@@ -95,7 +108,7 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
              options: StripOptions,
              monitor: WipeMonitor): WipeResult {
         val result = try {
-            withSeekableSource(file.uri) { input -> wipe(file.uri, input, destination, options, monitor) }
+            withSeekableSource(file.uri, file.byteSize, monitor) { input -> wipe(file.uri, input, destination, options, monitor) }
         } catch (_: CancellationException) {
             FailedResult(WipeFailure.Cancelled)
         } catch (e: InsufficientSpaceException) {
@@ -325,8 +338,11 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
     /*
      * Handlers need random access. Most providers hand back a regular file, but some (cloud
      * providers, mostly) return a pipe, which can't seek; those are copied to a temp file first.
+     * For a cloud file that copy is the download, so it reports progress and can be cancelled.
      */
     private fun <T> withSeekableSource(uri: Uri,
+                                       expectedSize: Long,
+                                       monitor: WipeMonitor,
                                        block: (SeekableByteChannel) -> T): T {
         documentStore.openFileDescriptor(uri).use { descriptor ->
             if (descriptor.statSize >= 0) {
@@ -334,7 +350,8 @@ class WipeFilesUseCase(private val documentStore: DocumentStore,
             }
         }
         return tempFileStore.withTempFile { copy ->
-            documentStore.copyTo(uri, copy)
+            monitor.onProgress(WipePhase.Reading, null)
+            documentStore.copyTo(uri, copy) { progressStream(it, expectedSize, WipePhase.Reading, monitor) }
             FileChannel.open(copy.toPath()).use(block)
         }
     }

@@ -3,6 +3,7 @@ package com.prateekmahendrakar.metadatawiper.wipe
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.prateekmahendrakar.metadatawiper.PipeProvider
 import com.prateekmahendrakar.metadatawiper.VideoFixtures
 import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandlerRegistry
@@ -16,11 +17,13 @@ import com.prateekmahendrakar.metadatawiper.verify.VideoDecodeVerifier
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 @RunWith(AndroidJUnit4::class)
 class WipeFilesUseCaseTest {
@@ -118,6 +121,48 @@ class WipeFilesUseCaseTest {
 
         assertEquals(FileFormat.Unknown, file.format)
         assertEquals(UnsupportedReason.UnknownFormat, file.unsupportedReason)
+    }
+
+    @Test
+    fun readsAFileThatCannotSeekAndReportsProgress() {
+        val fractions = mutableListOf<Float?>()
+        val file = useCase().inspect(PipeProvider.uriFor("fixtures/mp4-android.mp4"), WipeMonitor(onProgress = { phase, fraction ->
+            assertEquals(WipePhase.Reading, phase)
+            fractions += fraction
+        }))
+
+        assertEquals(FileFormat.Mp4, file.format)
+        assertTrue(file.hasRemovableMetadata(StripOptions()))
+        assertEquals(1f, fractions.last())
+        assertTrue(tempFiles.isEmpty())
+    }
+
+    @Test
+    fun cancellingALongReadStopsAtOnce() {
+        var isCancelled = false
+        val monitor = WipeMonitor(isCancelled = { isCancelled }, onProgress = { _, fraction -> isCancelled = (fraction ?: 0f) > 0f })
+        val started = System.nanoTime()
+
+        assertThrows(CancellationException::class.java) { useCase().inspect(PipeProvider.uriFor("endless"), monitor) }
+        assertTrue(System.nanoTime() - started < 10_000_000_000L)
+        assertTrue(tempFiles.isEmpty())
+    }
+
+    @Test
+    fun cancellingAWipeWhileReadingStopsAtOnce() {
+        val endless = SelectedFile(uri = PipeProvider.uriFor("endless"),
+                                   displayName = "endless",
+                                   format = FileFormat.Mp4,
+                                   byteSize = PipeProvider.ENDLESS_SIZE,
+                                   inspection = null,
+                                   metadataGroups = emptyList())
+        var isCancelled = false
+        val monitor = WipeMonitor(isCancelled = { isCancelled }, onProgress = { _, fraction -> isCancelled = (fraction ?: 0f) > 0f })
+        val output = File(workDirectory, "cancelled.mp4")
+
+        assertEquals(FailedResult(WipeFailure.Cancelled), wipe(useCase(), endless, LocalFileDestination(output), monitor))
+        assertFalse(output.exists())
+        assertTrue(tempFiles.isEmpty())
     }
 
     private fun selected(name: String): SelectedFile {

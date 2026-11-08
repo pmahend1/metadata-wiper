@@ -75,8 +75,9 @@ class MainActivity : ComponentActivity() {
             // A long wipe has no foreground service, so a sleeping screen could end it.
             val view = LocalView.current
             val isWiping = wipeState.progress != null
-            DisposableEffect(view, isWiping) {
-                view.keepScreenOn = isWiping
+            val keepsScreenOn = isWiping || wipeState.loading != null
+            DisposableEffect(view, keepsScreenOn) {
+                view.keepScreenOn = keepsScreenOn
                 onDispose { view.keepScreenOn = false }
             }
 
@@ -126,10 +127,15 @@ class MainActivity : ComponentActivity() {
                                      onOverwrite = { wipeViewModel.overwriteOriginals(privacy) },
                                      onSaveTo = { wipeViewModel.saveTo(it, privacy) },
                                      onSaveToFolder = { wipeViewModel.saveToFolder(it, privacy) },
-                                     onShare = { wipeViewModel.share(privacy) })
+                                     onShare = { wipeViewModel.share(privacy) },
+                                     onAddFiles = { wipeViewModel.add(it) },
+                                     onCancelLoading = { wipeViewModel.cancel() })
                     }
 
                     else -> HomeScreen(isBusy = wipeState.isBusy,
+                                       loading = wipeState.loading,
+                                       isCancelling = wipeState.isCancelling,
+                                       onCancelLoading = { wipeViewModel.cancel() },
                                        onFilesSelected = { wipeViewModel.select(it) },
                                        onOpenSettings = { showSettings = true })
                 }

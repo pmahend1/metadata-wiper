@@ -37,6 +37,19 @@ class DocumentStore(private val contentResolver: ContentResolver) {
         return null
     }
 
+    // What the provider reports, which for a cloud file is known before any of it is downloaded.
+    fun size(uri: Uri): Long? {
+        contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIndex != -1 && cursor.isNull(sizeIndex) == false) {
+                    return cursor.getLong(sizeIndex)
+                }
+            }
+        }
+        return null
+    }
+
     fun openFileDescriptor(uri: Uri): ParcelFileDescriptor {
         return contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException("No descriptor for document")
     }

@@ -39,10 +39,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.ui.theme.MetaDataWiperTheme
+import com.prateekmahendrakar.metadatawiper.wipe.LoadingProgress
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(isBusy: Boolean,
+               loading: LoadingProgress?,
+               isCancelling: Boolean,
+               onCancelLoading: () -> Unit,
                onFilesSelected: (List<Uri>) -> Unit,
                onOpenSettings: () -> Unit) {
     val openFilesLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenMultipleDocuments(),
@@ -101,7 +105,9 @@ fun HomeScreen(isBusy: Boolean,
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(text = stringResource(id = R.string.choose_files), style = MaterialTheme.typography.titleMedium)
                     }
-                    if (isBusy) {
+                    if (loading != null) {
+                        LoadingCard(loading, isCancelling, onCancelLoading)
+                    } else if (isBusy) {
                         LinearProgressIndicator(modifier = Modifier.width(160.dp))
                     }
                     Text(text = stringResource(id = R.string.choose_several_hint),
@@ -118,6 +124,6 @@ fun HomeScreen(isBusy: Boolean,
 @Composable
 fun HomeScreenPreview() {
     MetaDataWiperTheme {
-        HomeScreen(isBusy = false, onFilesSelected = {}, onOpenSettings = {})
+        HomeScreen(isBusy = false, loading = null, isCancelling = false, onCancelLoading = {}, onFilesSelected = {}, onOpenSettings = {})
     }
 }

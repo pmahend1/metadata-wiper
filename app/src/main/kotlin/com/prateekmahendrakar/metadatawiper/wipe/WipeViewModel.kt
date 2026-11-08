@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.cancellation.CancellationException
 
 class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                     private val tempFileStore: TempFileStore,
@@ -81,6 +82,29 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
     fun select(uris: List<Uri>) = select(uris, canOverwrite = true)
 
     fun selectShared(uris: List<Uri>) = select(uris, canOverwrite = false)
+
+    /* Appends to the current selection, so files from different folders can be cleaned together.
+       Files already selected are skipped, and cancelling keeps what was selected before. Overwrite
+       stays as it was: picked files can be replaced, but shared ones can't. */
+    fun add(uris: List<Uri>) {
+        val selected = _uiState.value.files.map { it.uri }.toSet()
+        val newUris = uris.filter { (it in selected) == false }
+        if (newUris.isEmpty()) {
+            return
+        }
+        runExclusively {
+            isCancelRequested.set(false)
+            val added = try {
+                inspectAll(newUris)
+            } catch (_: CancellationException) {
+                return@runExclusively
+            } finally {
+                _uiState.update { it.copy(loading = null) }
+            }
+            val freeSpace = tempFileStore.usableSpace()
+            _uiState.update { it.copy(files = it.files + added, freeSpace = freeSpace) }
+        }
+    }
 
     fun overwriteOriginals(settings: PrivacySettings) = wipeAll(settings, WipeAction.Replaced) { _, _ -> OverwriteDestination }
 
@@ -134,9 +158,30 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
             return
         }
         runExclusively {
-            val files = uris.map { wipeFiles.inspect(it) }
+            isCancelRequested.set(false)
+            val files = try {
+                inspectAll(uris)
+            } catch (_: CancellationException) {
+                return@runExclusively
+            } finally {
+                _uiState.update { it.copy(loading = null) }
+            }
             val freeSpace = tempFileStore.usableSpace()
             _uiState.update { WipeUiState(files = files, canOverwrite = canOverwrite, isBusy = it.isBusy, freeSpace = freeSpace) }
+        }
+    }
+
+    private fun inspectAll(uris: List<Uri>): List<SelectedFile> {
+        val fileName = if (uris.size == 1) wipeFiles.displayName(uris.first()) else ""
+        _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, fraction = null)) }
+        return uris.mapIndexed { index, uri ->
+            // Only a source that has to be copied reports progress; any other file is read in a moment.
+            val report = { _: WipePhase, fraction: Float? ->
+                val overall = if (fraction == null && uris.size == 1) null else (index + (fraction ?: 0f)) / uris.size
+                _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, overall)) }
+            }
+            report(WipePhase.Reading, if (uris.size == 1) null else 0f)
+            wipeFiles.inspect(uri, WipeMonitor(isCancelled = { isCancelRequested.get() }, onProgress = report))
         }
     }
 
