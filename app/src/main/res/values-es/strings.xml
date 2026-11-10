@@ -211,6 +211,7 @@
     <string name="progress_keep_open">Mantén la app abierta hasta que termine.</string>
     <string name="progress_replacing">No se puede cancelar mientras se reemplaza el original.</string>
     <string name="add_more">Añadir más</string>
+    <string name="remove_file">Quitar %s</string>
     <string name="cancel">Cancelar</string>
     <string name="cancelling">Cancelando…</string>
     <plurals name="loading_files">

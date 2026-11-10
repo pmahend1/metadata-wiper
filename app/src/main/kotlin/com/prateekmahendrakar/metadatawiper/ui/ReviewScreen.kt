@@ -43,6 +43,7 @@ fun ReviewScreen(state: WipeUiState,
                  onSaveToFolder: (Uri) -> Unit,
                  onShare: () -> Unit,
                  onAddFiles: (List<Uri>) -> Unit,
+                 onRemoveFile: (Int) -> Unit,
                  onCancelLoading: () -> Unit) {
     val files = state.files
     val firstFile = files.first()
@@ -123,7 +124,11 @@ fun ReviewScreen(state: WipeUiState,
         if (files.size == 1) {
             SingleFileReview(file = firstFile, options = options, modifier = Modifier.padding(padding))
         } else {
-            BatchReview(files = files, options = options, modifier = Modifier.padding(padding))
+            BatchReview(files = files,
+                        options = options,
+                        canRemove = state.isBusy == false,
+                        onRemove = onRemoveFile,
+                        modifier = Modifier.padding(padding))
         }
     }
 }

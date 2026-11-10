@@ -129,6 +129,7 @@ class MainActivity : ComponentActivity() {
                                      onSaveToFolder = { wipeViewModel.saveToFolder(it, privacy) },
                                      onShare = { wipeViewModel.share(privacy) },
                                      onAddFiles = { wipeViewModel.add(it) },
+                                     onRemoveFile = { wipeViewModel.remove(it) },
                                      onCancelLoading = { wipeViewModel.cancel() })
                     }
 

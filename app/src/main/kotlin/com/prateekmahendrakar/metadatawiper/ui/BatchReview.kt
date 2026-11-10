@@ -54,6 +54,8 @@ import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
 @Composable
 fun BatchReview(files: List<SelectedFile>,
                 options: StripOptions,
+                canRemove: Boolean,
+                onRemove: (Int) -> Unit,
                 modifier: Modifier = Modifier) {
     var inspectedFile by remember { mutableStateOf<SelectedFile?>(null) }
     val hasLocation = files.any { MetadataCategory.Location in it.removableCategories(options) }
@@ -74,10 +76,12 @@ fun BatchReview(files: List<SelectedFile>,
                  modifier = Modifier.padding(vertical = 8.dp))
         }
         // The index is part of the key because the same file can be picked twice.
-        itemsIndexed(files, key = { index, file -> "$index:${file.uri}" }) { _, file ->
+        itemsIndexed(files, key = { index, file -> "$index:${file.uri}" }) { index, file ->
             Thumbnail(file = file,
                       hasLocation = MetadataCategory.Location in file.removableCategories(options),
-                      onClick = { inspectedFile = file })
+                      canRemove = canRemove,
+                      onClick = { inspectedFile = file },
+                      onRemove = { onRemove(index) })
         }
         if (hasLocation || hasUncleanable) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -146,7 +150,9 @@ private fun BatchSummary(files: List<SelectedFile>,
 @Composable
 private fun Thumbnail(file: SelectedFile,
                       hasLocation: Boolean,
-                      onClick: () -> Unit) {
+                      canRemove: Boolean,
+                      onClick: () -> Unit,
+                      onRemove: () -> Unit) {
     Box(modifier = Modifier
         .aspectRatio(1f)
         .clip(RoundedCornerShape(12.dp))
@@ -159,6 +165,26 @@ private fun Thumbnail(file: SelectedFile,
             Badge(R.drawable.block_24px, MaterialTheme.colorScheme.inverseSurface, MaterialTheme.colorScheme.inverseOnSurface)
         } else if (hasLocation) {
             Badge(R.drawable.location_on_24px, MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.error)
+        }
+        // Top start, because the status badge already holds the top end.
+        if (canRemove) {
+            Box(modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .size(26.dp)
+                    .shadow(2.dp, CircleShape)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape),
+                    contentAlignment = Alignment.Center) {
+                    Icon(painter = painterResource(id = R.drawable.close_24px),
+                         contentDescription = stringResource(id = R.string.remove_file, file.displayName),
+                         tint = MaterialTheme.colorScheme.onSurface,
+                         modifier = Modifier.size(16.dp))
+                }
+            }
         }
     }
 }

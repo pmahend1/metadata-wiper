@@ -131,6 +131,16 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         }
     }
 
+    // By position, because a file shared in twice is selected twice under the same URI.
+    fun remove(index: Int) {
+        if (_uiState.value.isBusy) {
+            return
+        }
+        _uiState.update { state ->
+            if (index in state.files.indices) state.copy(files = state.files.filterIndexed { i, _ -> i != index }) else state
+        }
+    }
+
     fun onShareLaunched() {
         _uiState.update { it.copy(pendingShare = null) }
     }

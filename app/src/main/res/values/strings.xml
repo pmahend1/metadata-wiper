@@ -203,6 +203,7 @@
     <string name="progress_keep_open">Keep the app open until this finishes.</string>
     <string name="progress_replacing">This can\'t be cancelled while the original is being replaced.</string>
     <string name="add_more">Add more</string>
+    <string name="remove_file">Remove %s</string>
     <string name="cancel">Cancel</string>
     <string name="cancelling">Cancelling…</string>
     <plurals name="loading_files">
