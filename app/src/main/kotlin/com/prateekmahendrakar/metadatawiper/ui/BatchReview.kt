@@ -55,7 +55,7 @@ import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
 fun BatchReview(files: List<SelectedFile>,
                 options: StripOptions,
                 canRemove: Boolean,
-                onRemove: (Int) -> Unit,
+                onRemove: (SelectedFile) -> Unit,
                 modifier: Modifier = Modifier) {
     var inspectedFile by remember { mutableStateOf<SelectedFile?>(null) }
     val hasLocation = files.any { MetadataCategory.Location in it.removableCategories(options) }
@@ -76,12 +76,12 @@ fun BatchReview(files: List<SelectedFile>,
                  modifier = Modifier.padding(vertical = 8.dp))
         }
         // The index is part of the key because the same file can be picked twice.
-        itemsIndexed(files, key = { index, file -> "$index:${file.uri}" }) { index, file ->
+        itemsIndexed(files, key = { index, file -> "$index:${file.uri}" }) { _, file ->
             Thumbnail(file = file,
                       hasLocation = MetadataCategory.Location in file.removableCategories(options),
                       canRemove = canRemove,
                       onClick = { inspectedFile = file },
-                      onRemove = { onRemove(index) })
+                      onRemove = { onRemove(file) })
         }
         if (hasLocation || hasUncleanable) {
             item(span = { GridItemSpan(maxLineSpan) }) {

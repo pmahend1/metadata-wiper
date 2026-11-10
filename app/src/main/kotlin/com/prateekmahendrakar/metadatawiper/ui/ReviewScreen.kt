@@ -30,6 +30,7 @@ import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.wipe.CleanedFileName
 import com.prateekmahendrakar.metadatawiper.wipe.OutputMimeType
+import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
 import com.prateekmahendrakar.metadatawiper.wipe.WipeUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +44,7 @@ fun ReviewScreen(state: WipeUiState,
                  onSaveToFolder: (Uri) -> Unit,
                  onShare: () -> Unit,
                  onAddFiles: (List<Uri>) -> Unit,
-                 onRemoveFile: (Int) -> Unit,
+                 onRemoveFile: (SelectedFile) -> Unit,
                  onCancelLoading: () -> Unit) {
     val files = state.files
     val firstFile = files.first()

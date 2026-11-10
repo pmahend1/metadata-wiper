@@ -131,13 +131,16 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         }
     }
 
-    // By position, because a file shared in twice is selected twice under the same URI.
-    fun remove(index: Int) {
+    /* By identity, because a file shared in twice is selected twice under the same URI and equal
+       fields. Not by position: a second tap that lands before the grid recomposes still carries the
+       old index, which by then points at the next file. */
+    fun remove(file: SelectedFile) {
         if (_uiState.value.isBusy) {
             return
         }
         _uiState.update { state ->
-            if (index in state.files.indices) state.copy(files = state.files.filterIndexed { i, _ -> i != index }) else state
+            val index = state.files.indexOfFirst { it === file }
+            if (index == -1) state else state.copy(files = state.files.filterIndexed { i, _ -> i != index })
         }
     }
 
