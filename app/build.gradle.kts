@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)
+    implementation(libs.coil.video)
     implementation(libs.androidx.core.splash)
 
     testImplementation(libs.junit)

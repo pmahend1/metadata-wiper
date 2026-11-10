@@ -1,7 +1,6 @@
 package com.prateekmahendrakar.metadatawiper.ui
 
 import android.text.format.Formatter
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,16 +35,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.R
-import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
 import com.prateekmahendrakar.metadatawiper.wipe.CleanedResult
 import com.prateekmahendrakar.metadatawiper.wipe.FailedResult
@@ -62,12 +58,13 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultsScreen(state: WipeUiState,
+                  onCancel: () -> Unit,
                   onShare: () -> Unit,
                   onDone: () -> Unit) {
     Scaffold(topBar = {
         Column {
             TopAppBar(title = { Text(stringResource(id = R.string.results_title)) })
-            if (state.isBusy) {
+            if (state.isBusy && state.progress == null) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
@@ -88,7 +85,12 @@ fun ResultsScreen(state: WipeUiState,
                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                ResultsHeader(state)
+                val progress = state.progress
+                if (progress != null) {
+                    WipeProgressCard(progress, state.isCancelling, onCancel)
+                } else {
+                    ResultsHeader(state)
+                }
             }
             // The index is part of the key because the same file can be picked twice.
             itemsIndexed(state.results, key = { index, wiped -> "$index:${wiped.file.uri}" }) { _, wiped ->
@@ -158,13 +160,12 @@ private fun ResultCard(wiped: FileWipeResult) {
             .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Image(painter = rememberAsyncImagePainter(wiped.file.uri),
-                  contentDescription = null,
-                  contentScale = ContentScale.Crop,
-                  modifier = Modifier
-                      .size(44.dp)
-                      .clip(RoundedCornerShape(10.dp))
-                      .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            FileThumbnail(file = wiped.file,
+                          contentDescription = null,
+                          modifier = Modifier
+                              .size(44.dp)
+                              .clip(RoundedCornerShape(10.dp))
+                              .background(MaterialTheme.colorScheme.surfaceContainerHighest))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = wiped.file.displayName, style = MaterialTheme.typography.titleSmall)
                 Text(text = if (result is NothingToRemoveResult) fileDetailsText(wiped.file) else resultSummary(result),
@@ -269,17 +270,9 @@ private fun resultSummary(result: WipeResult): String {
     return when (result) {
         is CleanedResult -> pluralStringResource(id = R.plurals.removed_count, count = result.report.removed.size, result.report.removed.size)
         NothingToRemoveResult -> stringResource(id = R.string.nothing_to_remove_detail)
-        is UnsupportedResult -> unsupportedMessage(result.format)
-        is FailedResult -> stringResource(id = failureMessage(result.failure))
+        is UnsupportedResult -> unsupportedText(result.format, result.reason)
+        is FailedResult -> stringResource(id = failureMessage(result.failure), Formatter.formatShortFileSize(LocalContext.current, result.bytesNeeded))
     }
-}
-
-@Composable
-private fun unsupportedMessage(format: FileFormat): String {
-    if (format == FileFormat.Unknown) {
-        return stringResource(id = R.string.unknown_format)
-    }
-    return stringResource(id = R.string.unsupported_format, formatName(format))
 }
 
 private fun statusLabel(result: WipeResult): Int {
@@ -287,10 +280,11 @@ private fun statusLabel(result: WipeResult): Int {
         is CleanedResult -> R.string.status_cleaned
         NothingToRemoveResult -> R.string.status_nothing_to_remove
         is UnsupportedResult -> R.string.status_unsupported
-        is FailedResult -> R.string.status_failed
+        is FailedResult -> if (result.failure == WipeFailure.Cancelled) R.string.status_cancelled else R.string.status_failed
     }
 }
 
+// Only the InsufficientSpace string uses its argument, the size needed.
 private fun failureMessage(failure: WipeFailure): Int {
     return when (failure) {
         WipeFailure.Unreadable -> R.string.failure_unreadable
@@ -299,6 +293,8 @@ private fun failureMessage(failure: WipeFailure): Int {
         WipeFailure.InvalidOutput -> R.string.failure_invalid_output
         WipeFailure.DecodeFailed -> R.string.failure_decode_failed
         WipeFailure.WriteFailed -> R.string.failure_write_failed
+        WipeFailure.InsufficientSpace -> R.string.failure_insufficient_space
+        WipeFailure.Cancelled -> R.string.failure_cancelled
         WipeFailure.Unexpected -> R.string.failure_unexpected
     }
 }

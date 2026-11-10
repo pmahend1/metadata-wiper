@@ -41,6 +41,18 @@ class CleanedFileNameTest {
     }
 
     @Test
+    fun keepsAnAliasOfTheDetectedFormat() {
+        assertEquals("clip_cleaned.m4v", CleanedFileName.of("clip.M4V", FileFormat.Mp4))
+        assertEquals("clip_cleaned.mp4", CleanedFileName.of("clip.mp4", FileFormat.Mp4))
+    }
+
+    @Test
+    fun ignoresAnAliasOfAnotherFormat() {
+        assertEquals("clip_cleaned.mov", CleanedFileName.of("clip.m4v", FileFormat.QuickTime))
+        assertEquals("clip_cleaned.mp4", CleanedFileName.of("clip.mov", FileFormat.Mp4))
+    }
+
+    @Test
     fun randomNameUsesHexDigitsAndDetectedExtension() {
         val name = CleanedFileName.random(FileFormat.Png, Random(42))
         assertTrue(name, Regex("[0-9a-f]{12}\\.png").matches(name))

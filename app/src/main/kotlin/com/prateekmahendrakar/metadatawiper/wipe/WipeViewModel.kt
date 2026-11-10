@@ -12,14 +12,17 @@ import com.prateekmahendrakar.metadatawiper.metadata.bmp.BmpHandler
 import com.prateekmahendrakar.metadatawiper.metadata.gif.GifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.heif.HeifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
+import com.prateekmahendrakar.metadatawiper.metadata.movie.IsoMediaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
 import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
 import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
 import com.prateekmahendrakar.metadatawiper.share.PendingShare
+import com.prateekmahendrakar.metadatawiper.share.ShareMimeType
 import com.prateekmahendrakar.metadatawiper.storage.DocumentStore
 import com.prateekmahendrakar.metadatawiper.storage.SharedFileStore
 import com.prateekmahendrakar.metadatawiper.storage.TempFileStore
 import com.prateekmahendrakar.metadatawiper.verify.DecodeVerifier
+import com.prateekmahendrakar.metadatawiper.verify.VideoDecodeVerifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,15 +31,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.cancellation.CancellationException
 
 class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
-                    tempFileStore: TempFileStore,
+                    private val tempFileStore: TempFileStore,
                     private val sharedFileStore: SharedFileStore) : ViewModel() {
 
     // region State
 
     private val _uiState = MutableStateFlow(WipeUiState())
     val uiState: StateFlow<WipeUiState> = _uiState.asStateFlow()
+
+    private val isCancelRequested = AtomicBoolean(false)
 
     // Leftovers from a crash are cleared before any new work creates temp files.
     private val startupCleanup: Job = viewModelScope.launch(Dispatchers.IO) {
@@ -45,8 +52,6 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
     }
 
     companion object {
-        private const val MIXED_IMAGE_MIME_TYPE = "image/*"
-
         val Factory = viewModelFactory {
             initializer {
                 val application = checkNotNull(this[APPLICATION_KEY])
@@ -54,13 +59,17 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                 val useCase = WipeFilesUseCase(DocumentStore(application.contentResolver),
                                                tempFileStore,
                                                DecodeVerifier(),
+                                               VideoDecodeVerifier(),
                                                FormatHandlerRegistry(listOf(JpegHandler(),
                                                                             PngHandler(),
                                                                             WebPHandler(),
                                                                             HeifHandler(FileFormat.Heif),
                                                                             HeifHandler(FileFormat.Avif),
                                                                             GifHandler(),
-                                                                            BmpHandler())))
+                                                                            BmpHandler(),
+                                                                            IsoMediaHandler(FileFormat.Mp4),
+                                                                            IsoMediaHandler(FileFormat.QuickTime),
+                                                                            IsoMediaHandler(FileFormat.ThreeGpp))))
                 WipeViewModel(useCase, tempFileStore, SharedFileStore(application))
             }
         }
@@ -74,6 +83,29 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
 
     fun selectShared(uris: List<Uri>) = select(uris, canOverwrite = false)
 
+    /* Appends to the current selection, so files from different folders can be cleaned together.
+       Files already selected are skipped, and cancelling keeps what was selected before. Overwrite
+       stays as it was: picked files can be replaced, but shared ones can't. */
+    fun add(uris: List<Uri>) {
+        val selected = _uiState.value.files.map { it.uri }.toSet()
+        val newUris = uris.filter { (it in selected) == false }
+        if (newUris.isEmpty()) {
+            return
+        }
+        runExclusively {
+            isCancelRequested.set(false)
+            val added = try {
+                inspectAll(newUris)
+            } catch (_: CancellationException) {
+                return@runExclusively
+            } finally {
+                _uiState.update { it.copy(loading = null) }
+            }
+            val freeSpace = tempFileStore.usableSpace()
+            _uiState.update { it.copy(files = it.files + added, freeSpace = freeSpace) }
+        }
+    }
+
     fun overwriteOriginals(settings: PrivacySettings) = wipeAll(settings, WipeAction.Replaced) { _, _ -> OverwriteDestination }
 
     fun saveTo(documentUri: Uri,
@@ -84,8 +116,8 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
 
     fun share(settings: PrivacySettings) {
         runExclusively {
-            val (results, pendingShare) = shareFiles(_uiState.value.files, settings)
-            finish(results, WipeAction.Shared, pendingShare)
+            val (results, pendingShare) = shareFiles(_uiState.value.files, settings, ::showResult)
+            finish(results, if (wasCancelled(results)) null else WipeAction.Shared, pendingShare)
         }
     }
 
@@ -94,13 +126,31 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         runExclusively {
             val files = _uiState.value.results.filter { it.result is CleanedResult || it.result is NothingToRemoveResult }
                                               .map { it.file }
-            val (_, pendingShare) = shareFiles(files, settings)
+            val (_, pendingShare) = shareFiles(files, settings) { }
             _uiState.update { it.copy(pendingShare = pendingShare) }
+        }
+    }
+
+    /* By identity, because a file shared in twice is selected twice under the same URI and equal
+       fields. Not by position: a second tap that lands before the grid recomposes still carries the
+       old index, which by then points at the next file. */
+    fun remove(file: SelectedFile) {
+        if (_uiState.value.isBusy) {
+            return
+        }
+        _uiState.update { state ->
+            val index = state.files.indexOfFirst { it === file }
+            if (index == -1) state else state.copy(files = state.files.filterIndexed { i, _ -> i != index })
         }
     }
 
     fun onShareLaunched() {
         _uiState.update { it.copy(pendingShare = null) }
+    }
+
+    fun cancel() {
+        isCancelRequested.set(true)
+        _uiState.update { it.copy(isCancelling = true) }
     }
 
     fun clear() {
@@ -110,14 +160,47 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         _uiState.update { WipeUiState() }
     }
 
+    // A wipe's thread blocks on file I/O and never sees the scope's cancellation by itself.
+    override fun onCleared() {
+        isCancelRequested.set(true)
+    }
+
     private fun select(uris: List<Uri>,
                        canOverwrite: Boolean) {
         if (uris.isEmpty()) {
             return
         }
         runExclusively {
-            val files = uris.map { wipeFiles.inspect(it) }
-            _uiState.update { WipeUiState(files = files, canOverwrite = canOverwrite, isBusy = it.isBusy) }
+            isCancelRequested.set(false)
+            val files = try {
+                inspectAll(uris)
+            } catch (_: CancellationException) {
+                return@runExclusively
+            } finally {
+                _uiState.update { it.copy(loading = null) }
+            }
+            val freeSpace = tempFileStore.usableSpace()
+            _uiState.update { WipeUiState(files = files, canOverwrite = canOverwrite, isBusy = it.isBusy, freeSpace = freeSpace) }
+        }
+    }
+
+    private fun inspectAll(uris: List<Uri>): List<SelectedFile> {
+        val fileName = if (uris.size == 1) wipeFiles.displayName(uris.first()) else ""
+        _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, fraction = null, isDownloading = false)) }
+        // Stays set for the rest of the batch once a file needs copying, so the hint doesn't flicker.
+        var isDownloading = false
+        return uris.mapIndexed { index, uri ->
+            val show = { fraction: Float? ->
+                val overall = if (fraction == null && uris.size == 1) null else (index + (fraction ?: 0f)) / uris.size
+                _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, overall, isDownloading)) }
+            }
+            show(if (uris.size == 1) null else 0f)
+            // Only a source that has to be copied reports progress; any other file is read in a moment.
+            val report = { _: WipePhase, fraction: Float? ->
+                isDownloading = true
+                show(fraction)
+            }
+            wipeFiles.inspect(uri, WipeMonitor(isCancelled = { isCancelRequested.get() }, onProgress = report))
         }
     }
 
@@ -125,15 +208,22 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                         action: WipeAction,
                         destination: (Int, SelectedFile) -> WipeDestination) {
         runExclusively {
-            finish(wipeEach(_uiState.value.files, settings, destination), action, pendingShare = null)
+            finish(wipeEach(_uiState.value.files, settings, ::showResult, destination), action, pendingShare = null)
         }
     }
 
     private fun shareFiles(files: List<SelectedFile>,
-                           settings: PrivacySettings): Pair<List<FileWipeResult>, PendingShare?> {
+                           settings: PrivacySettings,
+                           onWiped: (FileWipeResult) -> Unit): Pair<List<FileWipeResult>, PendingShare?> {
         sharedFileStore.clear()
         val outputs = files.mapIndexed { index, file -> sharedFileStore.fileFor(index, outputName(file, settings)) }
-        val results = wipeEach(files, settings) { index, _ -> LocalFileDestination(outputs[index]) }
+        val results = wipeEach(files, settings, onWiped) { index, _ -> LocalFileDestination(outputs[index]) }
+
+        // Cancelling means the user no longer wants these sent anywhere.
+        if (wasCancelled(results)) {
+            sharedFileStore.clear()
+            return results to null
+        }
         val shared = results.zip(outputs)
                             .filter { (wiped, _) -> wiped.result is CleanedResult || wiped.result is NothingToRemoveResult }
         return results to pendingShareOf(shared)
@@ -141,15 +231,37 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
 
     private fun wipeEach(files: List<SelectedFile>,
                          settings: PrivacySettings,
+                         onWiped: (FileWipeResult) -> Unit,
                          destination: (Int, SelectedFile) -> WipeDestination): List<FileWipeResult> {
+        isCancelRequested.set(false)
         return files.mapIndexed { index, file ->
-            FileWipeResult(file, wipeFiles.wipe(file.uri, destination(index, file), settings.stripOptions))
+            val target = destination(index, file)
+            val report = { phase: WipePhase, fraction: Float? ->
+                val progress = WipeProgress(fileIndex = index,
+                                            fileCount = files.size,
+                                            fileName = file.displayName,
+                                            phase = phase,
+                                            fraction = fraction,
+                                            canCancel = target != OverwriteDestination || phase != WipePhase.Writing)
+                _uiState.update { it.copy(progress = progress) }
+            }
+            report(WipePhase.Stripping, null)
+            val monitor = WipeMonitor(isCancelled = { isCancelRequested.get() }, onProgress = report)
+            FileWipeResult(file, wipeFiles.wipe(file, target, settings.stripOptions, monitor)).also(onWiped)
         }
+    }
+
+    private fun showResult(wiped: FileWipeResult) {
+        _uiState.update { it.copy(results = it.results + wiped) }
+    }
+
+    private fun wasCancelled(results: List<FileWipeResult>): Boolean {
+        return results.any { (it.result as? FailedResult)?.failure == WipeFailure.Cancelled }
     }
 
     // Failed files stay selected so the user can retry them.
     private fun finish(results: List<FileWipeResult>,
-                       action: WipeAction,
+                       action: WipeAction?,
                        pendingShare: PendingShare?) {
         val failedFiles = results.filter { it.result is FailedResult }
                                  .map { it.file }
@@ -160,9 +272,8 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
         if (shared.isEmpty()) {
             return null
         }
-        val mimeTypes = shared.map { (wiped, _) -> wiped.file.format.mimeType }.distinct()
         return PendingShare(uris = shared.map { (_, output) -> sharedFileStore.uriFor(output) },
-                            mimeType = mimeTypes.singleOrNull() ?: MIXED_IMAGE_MIME_TYPE)
+                            mimeType = ShareMimeType.commonTo(shared.map { (wiped, _) -> wiped.file.format.mimeType }))
     }
 
     private fun outputName(file: SelectedFile,
@@ -180,7 +291,7 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                 startupCleanup.join()
                 work()
             } finally {
-                _uiState.update { it.copy(isBusy = false) }
+                _uiState.update { it.copy(isBusy = false, progress = null, isCancelling = false) }
             }
         }
     }

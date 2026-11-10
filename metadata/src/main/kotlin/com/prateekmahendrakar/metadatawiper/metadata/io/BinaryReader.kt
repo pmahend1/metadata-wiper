@@ -28,7 +28,7 @@ class BinaryReader(private val channel: SeekableByteChannel) {
         get() = size - position
 
     private companion object {
-        const val COPY_CHUNK_SIZE = 64 * 1024
+        const val COPY_CHUNK_SIZE = 1024 * 1024
     }
 
     // endregion State
@@ -79,10 +79,19 @@ class BinaryReader(private val channel: SeekableByteChannel) {
                end: Long) {
         seek(start)
         var left = end - start
+        if (left <= 0) {
+            return
+        }
+        requireRemaining(left)
+
+        // One buffer for the whole span: a multi-gigabyte video would otherwise allocate a megabyte per chunk.
+        val buffer = ByteBuffer.allocate(minOf(left, COPY_CHUNK_SIZE.toLong()).toInt())
         while (left > 0) {
-            val chunk = readBytes(minOf(left, COPY_CHUNK_SIZE.toLong()).toInt())
-            output.write(chunk)
-            left -= chunk.size
+            buffer.clear()
+            buffer.limit(minOf(left, buffer.capacity().toLong()).toInt())
+            readFully(buffer)
+            output.write(buffer.array(), 0, buffer.position())
+            left -= buffer.position()
         }
     }
 

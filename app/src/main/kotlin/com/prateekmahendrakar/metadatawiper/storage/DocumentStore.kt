@@ -18,6 +18,7 @@ class DocumentStore(private val contentResolver: ContentResolver) {
     private companion object {
         // Plain "w" isn't guaranteed to truncate, which would leave the tail of the original behind.
         const val TRUNCATING_WRITE_MODE = "wt"
+        const val COPY_BUFFER_SIZE = 1024 * 1024
     }
 
     // endregion State
@@ -36,6 +37,19 @@ class DocumentStore(private val contentResolver: ContentResolver) {
         return null
     }
 
+    // What the provider reports, which for a cloud file is known before any of it is downloaded.
+    fun size(uri: Uri): Long? {
+        contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIndex != -1 && cursor.isNull(sizeIndex) == false) {
+                    return cursor.getLong(sizeIndex)
+                }
+            }
+        }
+        return null
+    }
+
     fun openFileDescriptor(uri: Uri): ParcelFileDescriptor {
         return contentResolver.openFileDescriptor(uri, "r") ?: throw FileNotFoundException("No descriptor for document")
     }
@@ -45,16 +59,18 @@ class DocumentStore(private val contentResolver: ContentResolver) {
     }
 
     fun copyTo(uri: Uri,
-               destination: File) {
+               destination: File,
+               wrapOutput: (OutputStream) -> OutputStream = { it }) {
         openInputStream(uri).use { input ->
-            destination.outputStream().use { output -> input.copyTo(output) }
+            wrapOutput(destination.outputStream()).use { output -> input.copyTo(output, COPY_BUFFER_SIZE) }
         }
     }
 
     // Used both to overwrite an original and to fill a document the user just created.
     fun writeDocument(uri: Uri,
-                      source: File) {
-        write(contentResolver.openOutputStream(uri, TRUNCATING_WRITE_MODE), source)
+                      source: File,
+                      wrapOutput: (OutputStream) -> OutputStream = { it }) {
+        write(contentResolver.openOutputStream(uri, TRUNCATING_WRITE_MODE), source, wrapOutput)
     }
 
     fun createInFolder(treeUri: Uri,
@@ -74,12 +90,13 @@ class DocumentStore(private val contentResolver: ContentResolver) {
     }
 
     private fun write(output: OutputStream?,
-                      source: File) {
+                      source: File,
+                      wrapOutput: (OutputStream) -> OutputStream) {
         if (output == null) {
             throw FileNotFoundException("No output stream for document")
         }
-        output.use { stream ->
-            source.inputStream().use { it.copyTo(stream) }
+        wrapOutput(output).use { stream ->
+            source.inputStream().use { it.copyTo(stream, COPY_BUFFER_SIZE) }
         }
     }
 

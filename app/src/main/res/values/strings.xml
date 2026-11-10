@@ -3,16 +3,16 @@
             translatable="false">Metadata Wiper</string>
     <string name="settings">Settings</string>
     <string name="back">Back</string>
-    <string name="selected_image">Selected image</string>
+    <string name="selected_file">Selected file</string>
 
     <string name="home_headline">Remove hidden details before you share</string>
-    <string name="home_body">Images can record where and when they were taken, and which phone took them. See those details, then remove them.</string>
-    <string name="choose_images">Choose images</string>
-    <string name="choose_several_hint">Choosing several? Long-press the first image.</string>
+    <string name="home_body">Photos and videos can record where and when they were taken, and which phone took them. See those details, then remove them.</string>
+    <string name="choose_files">Choose photos and videos</string>
+    <string name="choose_several_hint">Choosing several? Long-press the first file.</string>
 
-    <plurals name="image_count">
-        <item quantity="one">%d image</item>
-        <item quantity="other">%d images</item>
+    <plurals name="file_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
     </plurals>
     <string name="file_details">%1$s · %2$s</string>
     <plurals name="items_found">
@@ -30,12 +30,12 @@
         <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged. It will be skipped.</item>
         <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged. They will be skipped.</item>
     </plurals>
-    <plurals name="images_can_be_cleaned">
-        <item quantity="one">%d image can be cleaned. It holds:</item>
-        <item quantity="other">%d images can be cleaned. They hold:</item>
+    <plurals name="files_can_be_cleaned">
+        <item quantity="one">%d file can be cleaned. It holds:</item>
+        <item quantity="other">%d files can be cleaned. They hold:</item>
     </plurals>
     <string name="category_count">%1$s · %2$d</string>
-    <string name="tap_to_inspect">Tap an image to see what it contains.</string>
+    <string name="tap_to_inspect">Tap a file to see what it contains.</string>
     <string name="legend_location">Has location</string>
     <string name="legend_unsupported">Can\'t be cleaned</string>
     <string name="share_chooser_title">Share cleaned files</string>
@@ -51,9 +51,9 @@
     <string name="category_other">Other</string>
     <string name="category_color_profile">Color profile</string>
     <string name="category_orientation">Orientation</string>
-    <string name="reason_location">Where the image was taken</string>
+    <string name="reason_location">Where it was taken</string>
     <string name="reason_people">Names that can identify you</string>
-    <string name="reason_device">Can link images back to your phone</string>
+    <string name="reason_device">Can link files back to your phone</string>
     <string name="reason_date_time">When it was taken or edited</string>
     <string name="reason_thumbnail">A small preview that can show parts you cropped out</string>
     <string name="reason_embedded_media">Hidden videos or images inside the file</string>
@@ -146,8 +146,8 @@
 
     <string name="results_title">Results</string>
     <plurals name="results_cleaned">
-        <item quantity="one">%d image cleaned</item>
-        <item quantity="other">%d images cleaned</item>
+        <item quantity="one">%d file cleaned</item>
+        <item quantity="other">%d files cleaned</item>
     </plurals>
     <string name="results_none_cleaned">Nothing was cleaned</string>
     <plurals name="results_saved">
@@ -174,20 +174,45 @@
     <string name="status_nothing_to_remove">Nothing to remove</string>
     <string name="status_unsupported">Unsupported</string>
     <string name="status_failed">Failed</string>
+    <string name="status_cancelled">Cancelled</string>
     <string name="report_removed">Removed</string>
     <string name="report_kept">Kept</string>
     <string name="report_warnings">Warnings</string>
     <string name="nothing_to_remove_detail">This file has no metadata that needs removing, so it was left unchanged.</string>
     <string name="unsupported_format">This file type isn\'t supported yet (%s).</string>
     <string name="unknown_format">This file type isn\'t recognized.</string>
-    <string name="decode_check_skipped">This device can\'t decode the format, so the cleaned image wasn\'t test-decoded.</string>
+    <string name="unsupported_in_stream">This video format can store the recording date and location inside the video stream, which Metadata Wiper can\'t remove yet.</string>
+    <string name="unsupported_encrypted">This video is encrypted, so it can\'t be cleaned.</string>
+    <string name="unsupported_external_references">This video depends on other files, so it can\'t be cleaned on its own.</string>
+    <string name="decode_check_skipped">This device can\'t decode the format, so the cleaned file wasn\'t test-decoded.</string>
     <string name="failure_unreadable">The file couldn\'t be read.</string>
-    <string name="failure_malformed">The file is damaged or isn\'t a valid image.</string>
+    <string name="failure_malformed">The file is damaged or isn\'t a valid image or video.</string>
     <string name="failure_metadata_remained">Some metadata couldn\'t be removed, so no cleaned copy was saved.</string>
     <string name="failure_invalid_output">The cleaned copy failed verification, so it wasn\'t saved.</string>
-    <string name="failure_decode_failed">The cleaned copy didn\'t open as an image, so it wasn\'t saved.</string>
+    <string name="failure_decode_failed">The cleaned copy didn\'t open, so it wasn\'t saved.</string>
     <string name="failure_write_failed">The cleaned copy couldn\'t be saved.</string>
+    <string name="failure_insufficient_space">Not enough free space. Cleaning this file needs %s.</string>
+    <string name="failure_cancelled">Cleaning was cancelled, so this file wasn\'t changed.</string>
     <string name="failure_unexpected">Something went wrong while cleaning this file.</string>
+
+    <string name="progress_file">File %1$d of %2$d · %3$s</string>
+    <string name="progress_reading">Reading</string>
+    <string name="progress_cleaning">Cleaning</string>
+    <string name="progress_checking">Checking</string>
+    <string name="progress_saving">Saving</string>
+    <string name="progress_keep_open">Keep the app open until this finishes.</string>
+    <string name="progress_replacing">This can\'t be cancelled while the original is being replaced.</string>
+    <string name="add_more">Add more</string>
+    <string name="remove_file">Remove %s</string>
+    <string name="cancel">Cancel</string>
+    <string name="cancelling">Cancelling…</string>
+    <plurals name="loading_files">
+        <item quantity="one">Reading %d file</item>
+        <item quantity="other">Reading %d files</item>
+    </plurals>
+    <string name="loading_hint">Files in cloud storage are downloaded first, which can take a while.</string>
+    <string name="space_short">Not enough free space: this needs %1$s, and %2$s is available.</string>
+    <string name="space_needed">Cleaning needs about %s of free space.</string>
 
     <string name="theme">Theme</string>
     <string name="theme_system">System</string>
@@ -195,7 +220,7 @@
     <string name="theme_dark">Dark</string>
     <string name="saving">Saving</string>
     <string name="overwrite_original_file">Overwrite original</string>
-    <string name="overwrite_original_description">Replace the image instead of saving a clean copy. Not available for images shared from another app.</string>
+    <string name="overwrite_original_description">Replace the file instead of saving a clean copy. Not available for files shared from another app.</string>
     <string name="privacy">Privacy</string>
     <string name="keep_color_profile">Keep color profile</string>
     <string name="keep_color_profile_description">Removing it can shift colors. Profiles rarely identify anyone.</string>

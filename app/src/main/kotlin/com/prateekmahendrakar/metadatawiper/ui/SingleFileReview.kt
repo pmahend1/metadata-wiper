@@ -1,6 +1,5 @@
 package com.prateekmahendrakar.metadatawiper.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -18,10 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.wipe.MetadataGrouping
@@ -40,12 +37,11 @@ fun SingleFileReview(file: SelectedFile,
         .padding(horizontal = 16.dp, vertical = 8.dp),
            verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = rememberAsyncImagePainter(file.uri),
-                  contentDescription = stringResource(id = R.string.selected_image),
-                  contentScale = ContentScale.Crop,
-                  modifier = Modifier
-                      .size(96.dp)
-                      .clip(RoundedCornerShape(16.dp)))
+            FileThumbnail(file = file,
+                          contentDescription = stringResource(id = R.string.selected_file),
+                          modifier = Modifier
+                              .size(96.dp)
+                              .clip(RoundedCornerShape(16.dp)))
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(text = file.displayName, style = MaterialTheme.typography.titleMedium)
                 Text(text = fileDetailsText(file),

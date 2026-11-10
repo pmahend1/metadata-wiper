@@ -12,5 +12,7 @@ enum class WipeFailure {
     InvalidOutput,
     DecodeFailed,
     WriteFailed,
+    InsufficientSpace,
+    Cancelled,
     Unexpected
 }

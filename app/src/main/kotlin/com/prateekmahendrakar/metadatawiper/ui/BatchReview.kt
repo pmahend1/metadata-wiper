@@ -1,7 +1,6 @@
 package com.prateekmahendrakar.metadatawiper.ui
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
@@ -57,6 +54,8 @@ import com.prateekmahendrakar.metadatawiper.wipe.SelectedFile
 @Composable
 fun BatchReview(files: List<SelectedFile>,
                 options: StripOptions,
+                canRemove: Boolean,
+                onRemove: (SelectedFile) -> Unit,
                 modifier: Modifier = Modifier) {
     var inspectedFile by remember { mutableStateOf<SelectedFile?>(null) }
     val hasLocation = files.any { MetadataCategory.Location in it.removableCategories(options) }
@@ -80,7 +79,9 @@ fun BatchReview(files: List<SelectedFile>,
         itemsIndexed(files, key = { index, file -> "$index:${file.uri}" }) { _, file ->
             Thumbnail(file = file,
                       hasLocation = MetadataCategory.Location in file.removableCategories(options),
-                      onClick = { inspectedFile = file })
+                      canRemove = canRemove,
+                      onClick = { inspectedFile = file },
+                      onRemove = { onRemove(file) })
         }
         if (hasLocation || hasUncleanable) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -120,7 +121,7 @@ private fun BatchSummary(files: List<SelectedFile>,
             if (categoryCounts.isEmpty()) {
                 Text(text = stringResource(id = R.string.no_removable_metadata), style = MaterialTheme.typography.bodyMedium)
             } else {
-                Text(text = pluralStringResource(id = R.plurals.images_can_be_cleaned, count = cleanable, cleanable),
+                Text(text = pluralStringResource(id = R.plurals.files_can_be_cleaned, count = cleanable, cleanable),
                      style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     categoryCounts.forEach { (category, count) ->
@@ -149,20 +150,41 @@ private fun BatchSummary(files: List<SelectedFile>,
 @Composable
 private fun Thumbnail(file: SelectedFile,
                       hasLocation: Boolean,
-                      onClick: () -> Unit) {
+                      canRemove: Boolean,
+                      onClick: () -> Unit,
+                      onRemove: () -> Unit) {
     Box(modifier = Modifier
         .aspectRatio(1f)
         .clip(RoundedCornerShape(12.dp))
         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
         .clickable(onClick = onClick)) {
-        Image(painter = rememberAsyncImagePainter(file.uri),
-              contentDescription = file.displayName,
-              contentScale = ContentScale.Crop,
-              modifier = Modifier.fillMaxSize())
+        FileThumbnail(file = file,
+                      contentDescription = file.displayName,
+                      modifier = Modifier.fillMaxSize())
         if (file.canBeCleaned == false) {
             Badge(R.drawable.block_24px, MaterialTheme.colorScheme.inverseSurface, MaterialTheme.colorScheme.inverseOnSurface)
         } else if (hasLocation) {
             Badge(R.drawable.location_on_24px, MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.error)
+        }
+        // Top start, because the status badge already holds the top end.
+        if (canRemove) {
+            Box(modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier
+                    .size(26.dp)
+                    .shadow(2.dp, CircleShape)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape),
+                    contentAlignment = Alignment.Center) {
+                    Icon(painter = painterResource(id = R.drawable.close_24px),
+                         contentDescription = stringResource(id = R.string.remove_file, file.displayName),
+                         tint = MaterialTheme.colorScheme.onSurface,
+                         modifier = Modifier.size(16.dp))
+                }
+            }
         }
     }
 }
