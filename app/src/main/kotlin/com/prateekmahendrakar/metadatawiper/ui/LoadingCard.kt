@@ -41,9 +41,12 @@ fun LoadingCard(loading: LoadingProgress,
             } else {
                 LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
             }
-            Text(text = stringResource(id = R.string.loading_hint),
-                 style = MaterialTheme.typography.bodySmall,
-                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Only once a file is being copied; a local file opens too fast for the hint to mean anything.
+            if (loading.isDownloading) {
+                Text(text = stringResource(id = R.string.loading_hint),
+                     style = MaterialTheme.typography.bodySmall,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             OutlinedButton(onClick = onCancel, enabled = isCancelling == false) {
                 Text(text = stringResource(id = if (isCancelling) R.string.cancelling else R.string.cancel))
             }

@@ -186,14 +186,20 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
 
     private fun inspectAll(uris: List<Uri>): List<SelectedFile> {
         val fileName = if (uris.size == 1) wipeFiles.displayName(uris.first()) else ""
-        _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, fraction = null)) }
+        _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, fraction = null, isDownloading = false)) }
+        // Stays set for the rest of the batch once a file needs copying, so the hint doesn't flicker.
+        var isDownloading = false
         return uris.mapIndexed { index, uri ->
+            val show = { fraction: Float? ->
+                val overall = if (fraction == null && uris.size == 1) null else (index + (fraction ?: 0f)) / uris.size
+                _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, overall, isDownloading)) }
+            }
+            show(if (uris.size == 1) null else 0f)
             // Only a source that has to be copied reports progress; any other file is read in a moment.
             val report = { _: WipePhase, fraction: Float? ->
-                val overall = if (fraction == null && uris.size == 1) null else (index + (fraction ?: 0f)) / uris.size
-                _uiState.update { it.copy(loading = LoadingProgress(uris.size, fileName, overall)) }
+                isDownloading = true
+                show(fraction)
             }
-            report(WipePhase.Reading, if (uris.size == 1) null else 0f)
             wipeFiles.inspect(uri, WipeMonitor(isCancelled = { isCancelRequested.get() }, onProgress = report))
         }
     }
