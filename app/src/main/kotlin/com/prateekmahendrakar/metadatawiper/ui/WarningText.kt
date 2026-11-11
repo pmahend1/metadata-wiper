@@ -17,12 +17,14 @@ object WarningText {
             MetadataWarningKind.AuxiliaryImagesKept -> R.string.warning_auxiliary_kept
             MetadataWarningKind.SubtitleTracksKept -> R.string.warning_subtitles_kept
             MetadataWarningKind.ChaptersKept -> R.string.warning_chapters_kept
+            MetadataWarningKind.FontAttachmentsKept -> R.string.warning_fonts_kept
             MetadataWarningKind.InStreamMetadataNotChecked -> R.string.warning_in_stream_not_checked
             MetadataWarningKind.UnreferencedDataKept -> R.string.warning_unreferenced_kept
             MetadataWarningKind.UnknownBoxesKept -> R.string.warning_unknown_boxes
             MetadataWarningKind.UnknownItemTypesKept -> R.string.warning_unknown_items
             MetadataWarningKind.UnknownPropertiesKept -> R.string.warning_unknown_properties
             MetadataWarningKind.UnknownTracksKept -> R.string.warning_unknown_tracks
+            MetadataWarningKind.UnknownElementsKept -> R.string.warning_unknown_elements
         }
     }
 

@@ -14,6 +14,9 @@ enum class MetadataWarningKind {
     SubtitleTracksKept,
     ChaptersKept,
 
+    // Matroska fonts that styled subtitles need. Their file names are blanked.
+    FontAttachmentsKept,
+
     // A camera known to write the date and location into the video stream itself, which isn't parsed yet.
     InStreamMetadataNotChecked,
 
@@ -22,5 +25,6 @@ enum class MetadataWarningKind {
     UnknownBoxesKept,
     UnknownItemTypesKept,
     UnknownPropertiesKept,
-    UnknownTracksKept
+    UnknownTracksKept,
+    UnknownElementsKept
 }

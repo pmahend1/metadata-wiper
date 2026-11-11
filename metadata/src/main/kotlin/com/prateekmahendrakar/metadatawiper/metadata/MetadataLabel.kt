@@ -69,6 +69,12 @@ object MetadataLabel {
     const val TELEMETRY_TRACK = "Telemetry track"
     const val TIMECODE = "Timecode"
     const val UNREFERENCED_DATA = "Unreferenced data"
+    const val TRACK_NAME = "Track name"
+    const val FILE_NAME = "File name"
+    const val SEGMENT_ID = "Segment ID"
+    const val ATTACHED_FILE = "Attached file"
+    const val TAGS = "Tags"
+    const val UNKNOWN_ELEMENT = "Unknown element"
 
     val all = listOf(EXIF_BLOCK,
                      XMP,
@@ -129,7 +135,13 @@ object MetadataLabel {
                      SAMSUNG_TRAILER,
                      TELEMETRY_TRACK,
                      TIMECODE,
-                     UNREFERENCED_DATA)
+                     UNREFERENCED_DATA,
+                     TRACK_NAME,
+                     FILE_NAME,
+                     SEGMENT_ID,
+                     ATTACHED_FILE,
+                     TAGS,
+                     UNKNOWN_ELEMENT)
 
     // endregion State
 }

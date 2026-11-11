@@ -132,6 +132,11 @@
     <string name="label_telemetry_track">Pista de telemetría (puede incluir GPS)</string>
     <string name="label_timecode">Código de tiempo (puede mostrar la hora)</string>
     <string name="label_unreferenced_data">Datos residuales en el vídeo</string>
+    <string name="label_track_name">Nombre de pista</string>
+    <string name="label_file_name">Nombre de archivo</string>
+    <string name="label_segment_id">ID de archivo (vincula vídeos relacionados)</string>
+    <string name="label_attached_file">Archivo adjunto</string>
+    <string name="label_tags">Etiquetas</string>
     <string name="warning_damaged_exif">Un bloque EXIF está dañado, así que no se puede mostrar su contenido. Se elimina igualmente.</string>
     <string name="warning_thumbnail_kept">Se conservó la miniatura de vista previa, porque quitarla puede impedir que la imagen se abra.</string>
     <string name="warning_auxiliary_kept">Se conservaron las imágenes auxiliares, como un mapa de profundidad o de ganancia HDR.</string>
@@ -143,6 +148,8 @@
     <string name="warning_in_stream_not_checked">Esta cámara puede guardar la fecha y la ubicación dentro de la secuencia de vídeo, algo que esta app aún no comprueba.</string>
     <string name="warning_unreferenced_kept">Hay %s bytes dentro del vídeo que ninguna pista usa, pero este archivo tiene datos que aún podrían apuntar a ellos, así que se dejaron sin cambios.</string>
     <string name="warning_unknown_tracks">Se dejaron sin cambios pistas de un tipo que esta app no reconoce (%s).</string>
+    <string name="warning_fonts_kept">Se conservaron las fuentes adjuntas para los subtítulos, para que los subtítulos con estilo se sigan viendo. Se quitaron sus nombres de archivo.</string>
+    <string name="warning_unknown_elements">Se dejaron sin cambios datos de vídeo que esta app no reconoce (%s).</string>
     <string name="value_present">Presente</string>
     <string name="note_gps_hidden">Android oculta la posición exacta a esta app. Los datos de ubicación se eliminan igualmente.</string>
     <string name="note_linked_profile">Esta ruta contiene un nombre de usuario. Los colores de la imagen no dependen de ella.</string>
