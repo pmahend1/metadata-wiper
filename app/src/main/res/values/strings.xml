@@ -129,6 +129,11 @@
     <string name="label_telemetry_track">Telemetry track (can hold GPS)</string>
     <string name="label_timecode">Timecode (can show time of day)</string>
     <string name="label_unreferenced_data">Leftover data in the video</string>
+    <string name="label_track_name">Track name</string>
+    <string name="label_file_name">File name</string>
+    <string name="label_segment_id">File ID (links related videos)</string>
+    <string name="label_attached_file">Attached file</string>
+    <string name="label_tags">Tags</string>
     <string name="warning_damaged_exif">An EXIF block is damaged, so its contents can\'t be listed. It is removed all the same.</string>
     <string name="warning_thumbnail_kept">The preview thumbnail was kept, because removing it can stop the image from opening.</string>
     <string name="warning_auxiliary_kept">Auxiliary images, such as a depth map or HDR gain map, were kept.</string>
@@ -140,6 +145,8 @@
     <string name="warning_in_stream_not_checked">This camera can store the date and location inside the video stream, which this app doesn\'t check yet.</string>
     <string name="warning_unreferenced_kept">%s bytes inside the video aren\'t used by any track, but this file has data that might still point to them, so they were left in place.</string>
     <string name="warning_unknown_tracks">Tracks of a type this app doesn\'t recognize (%s) were left in place.</string>
+    <string name="warning_fonts_kept">Fonts attached for subtitles were kept, so styled subtitles still show. Their file names were removed.</string>
+    <string name="warning_unknown_elements">Video data this app doesn\'t recognize (%s) was left in place.</string>
     <string name="value_present">Present</string>
     <string name="note_gps_hidden">Android hides the exact position from this app. The location data is still removed.</string>
     <string name="note_linked_profile">This path contains a user name. The image\'s colors don\'t depend on it.</string>

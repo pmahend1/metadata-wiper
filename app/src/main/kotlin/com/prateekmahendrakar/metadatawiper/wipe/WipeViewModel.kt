@@ -12,6 +12,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.bmp.BmpHandler
 import com.prateekmahendrakar.metadatawiper.metadata.gif.GifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.heif.HeifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
+import com.prateekmahendrakar.metadatawiper.metadata.matroska.MatroskaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.movie.IsoMediaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
 import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
@@ -69,7 +70,9 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                                                                             BmpHandler(),
                                                                             IsoMediaHandler(FileFormat.Mp4),
                                                                             IsoMediaHandler(FileFormat.QuickTime),
-                                                                            IsoMediaHandler(FileFormat.ThreeGpp))))
+                                                                            IsoMediaHandler(FileFormat.ThreeGpp),
+                                                                            MatroskaHandler(FileFormat.Matroska),
+                                                                            MatroskaHandler(FileFormat.WebM))))
                 WipeViewModel(useCase, tempFileStore, SharedFileStore(application))
             }
         }

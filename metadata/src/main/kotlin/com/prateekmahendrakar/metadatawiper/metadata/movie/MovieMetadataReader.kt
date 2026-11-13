@@ -1,5 +1,6 @@
 package com.prateekmahendrakar.metadatawiper.metadata.movie
 
+import com.prateekmahendrakar.metadatawiper.metadata.Iso6709
 import com.prateekmahendrakar.metadatawiper.metadata.MalformedFileException
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
@@ -8,7 +9,6 @@ import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.Box
 import com.prateekmahendrakar.metadatawiper.metadata.isobmff.BoxReader
 import java.nio.ByteBuffer
-import java.util.Locale
 
 /*
  * Lists what a `udta` or `meta` box holds. It only decides what the user is shown: the box is
@@ -68,9 +68,6 @@ class MovieMetadataReader(private val reader: BinaryReader,
                                 "com.android.manufacturer" to (device to MetadataLabel.MAKE),
                                 "com.android.model" to (device to MetadataLabel.MODEL),
                                 "com.android.version" to (software to MetadataLabel.SOFTWARE))
-
-    // Degrees only. The minutes and seconds forms ISO 6709 also allows don't appear in video files.
-    private val iso6709 = Regex("""^([+-]\d{2}(?:\.\d+)?)([+-]\d{3}(?:\.\d+)?)""")
 
     private val xmpUuid = byteArrayOf(0xBE.toByte(), 0x7A, 0xCF.toByte(), 0xCB.toByte(), 0x97.toByte(), 0xA9.toByte(),
                                       0x42, 0xE8.toByte(), 0x9C.toByte(), 0x71, 0x99.toByte(), 0x94.toByte(),
@@ -146,7 +143,7 @@ class MovieMetadataReader(private val reader: BinaryReader,
             val type = child.type
             when {
                 type == META -> readMeta(child)
-                type == GPS_POINT -> listOf(gps(child, coordinates(quickTimeText(child))))
+                type == GPS_POINT -> listOf(gps(child, Iso6709.coordinates(quickTimeText(child))))
                 type == LOCATION -> listOf(gps(child, locationCoordinates(child)))
                 type == GOOGLE_DATE -> listOf(item(child, dates to MetadataLabel.DATE_TIME_ORIGINAL, text(child.dataStart, child.end)))
                 type == YEAR -> listOf(item(child, dates to MetadataLabel.DATE_TIME_ORIGINAL, year(child)))
@@ -206,7 +203,7 @@ class MovieMetadataReader(private val reader: BinaryReader,
         val value = dataValue(entry)
         return when {
             tag == null -> unknownEntry(entry, key ?: entry.type)
-            key == LOCATION_KEY -> gps(entry, coordinates(value))
+            key == LOCATION_KEY -> gps(entry, Iso6709.coordinates(value))
             else -> item(entry, tag, value)
         }
     }
@@ -260,21 +257,7 @@ class MovieMetadataReader(private val reader: BinaryReader,
         val values = ByteBuffer.wrap(bytes, start, COORDINATES_SIZE)
         val longitude = values.int / FIXED_POINT_ONE
         val latitude = values.int / FIXED_POINT_ONE
-        return formatCoordinates(latitude, longitude)
-    }
-
-    private fun coordinates(iso6709Text: String): String {
-        val match = iso6709.find(iso6709Text) ?: return ""
-        return formatCoordinates(match.groupValues[1].toDouble(), match.groupValues[2].toDouble())
-    }
-
-    // Android zeroes these bytes for apps without ACCESS_MEDIA_LOCATION, so 0, 0 means "hidden", not the Gulf of Guinea.
-    private fun formatCoordinates(latitude: Double,
-                                  longitude: Double): String {
-        if (latitude == 0.0 && longitude == 0.0) {
-            return ""
-        }
-        return String.format(Locale.ROOT, "%.6f, %.6f", latitude, longitude)
+        return Iso6709.format(latitude, longitude)
     }
 
     private fun text(start: Long,
