@@ -8,6 +8,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.MetadataItem
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.riff.RiffChunk
+import com.prateekmahendrakar.metadatawiper.metadata.riff.RiffChunkReader
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.MinimalExifWriter
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -150,7 +152,7 @@ class WebPHandlerTest {
         }
     }
 
-    private fun chunks(webP: ByteArray): List<RiffChunk> = RiffChunkReader(BinaryReader(ByteArrayChannel(webP)), "WEBP").read()
+    private fun chunks(webP: ByteArray): List<RiffChunk> = RiffChunkReader(BinaryReader(ByteArrayChannel(webP))).read("WEBP")
 
     private fun flags(webP: ByteArray): Int = webP[chunks(webP).first().dataStart.toInt()].toInt() and 0xFF
 

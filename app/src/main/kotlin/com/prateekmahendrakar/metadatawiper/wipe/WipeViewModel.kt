@@ -8,12 +8,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandlerRegistry
+import com.prateekmahendrakar.metadatawiper.metadata.avi.AviHandler
 import com.prateekmahendrakar.metadatawiper.metadata.bmp.BmpHandler
 import com.prateekmahendrakar.metadatawiper.metadata.gif.GifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.heif.HeifHandler
 import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
 import com.prateekmahendrakar.metadatawiper.metadata.matroska.MatroskaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.movie.IsoMediaHandler
+import com.prateekmahendrakar.metadatawiper.metadata.mpeg.MpegStreamHandler
 import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
 import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
 import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
@@ -72,7 +74,10 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                                                                             IsoMediaHandler(FileFormat.QuickTime),
                                                                             IsoMediaHandler(FileFormat.ThreeGpp),
                                                                             MatroskaHandler(FileFormat.Matroska),
-                                                                            MatroskaHandler(FileFormat.WebM))))
+                                                                            MatroskaHandler(FileFormat.WebM),
+                                                                            AviHandler(),
+                                                                            MpegStreamHandler(FileFormat.MpegTs),
+                                                                            MpegStreamHandler(FileFormat.MpegPs))))
                 WipeViewModel(useCase, tempFileStore, SharedFileStore(application))
             }
         }
