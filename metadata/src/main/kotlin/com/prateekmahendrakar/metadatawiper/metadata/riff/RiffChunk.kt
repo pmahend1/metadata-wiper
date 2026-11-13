@@ -1,4 +1,4 @@
-package com.prateekmahendrakar.metadatawiper.metadata.webp
+package com.prateekmahendrakar.metadatawiper.metadata.riff
 
 /*
  * One chunk as absolute file offsets. [start] is its FourCC and [end] is exclusive and

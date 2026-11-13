@@ -11,6 +11,8 @@ import com.prateekmahendrakar.metadatawiper.metadata.MetadataWarning
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
 import com.prateekmahendrakar.metadatawiper.metadata.StripReport
 import com.prateekmahendrakar.metadatawiper.metadata.io.BinaryReader
+import com.prateekmahendrakar.metadatawiper.metadata.riff.RiffChunk
+import com.prateekmahendrakar.metadatawiper.metadata.riff.RiffChunkReader
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifBlockInspector
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.ExifInspection
 import com.prateekmahendrakar.metadatawiper.metadata.tiff.MinimalExifWriter
@@ -110,7 +112,7 @@ class WebPHandler : FormatHandler {
     }
 
     private fun readChunks(reader: BinaryReader): List<RiffChunk> {
-        val chunks = RiffChunkReader(reader, WEBP).read()
+        val chunks = RiffChunkReader(reader).read(WEBP)
         val first = chunks.first()
         if (first.fourCc !in firstChunkFourCcs) {
             throw MalformedFileException("WebP starts with a '${first.fourCc}' chunk instead of image data")

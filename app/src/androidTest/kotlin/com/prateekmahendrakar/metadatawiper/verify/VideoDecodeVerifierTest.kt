@@ -6,9 +6,11 @@ import com.prateekmahendrakar.metadatawiper.VideoFixtures
 import com.prateekmahendrakar.metadatawiper.metadata.FileFormat
 import com.prateekmahendrakar.metadatawiper.metadata.FormatHandler
 import com.prateekmahendrakar.metadatawiper.metadata.StripOptions
+import com.prateekmahendrakar.metadatawiper.metadata.avi.AviHandler
 import com.prateekmahendrakar.metadatawiper.metadata.matroska.MatroskaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.movie.IsoMediaHandler
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -35,6 +37,13 @@ class VideoDecodeVerifierTest {
         assertEquals(DecodeCheck.Passed, verifyStripped("3gp-metadata.3gp", FileFormat.ThreeGpp))
         assertEquals(DecodeCheck.Passed, verifyStripped("mkv-tags.mkv", MatroskaHandler(FileFormat.Matroska)))
         assertEquals(DecodeCheck.Passed, verifyStripped("webm-browser.webm", MatroskaHandler(FileFormat.WebM)))
+    }
+
+    // Most devices can't demux AVI, so only a failure would be wrong.
+    @Test
+    fun passesOrSkipsAStrippedAvi() {
+        val check = verifyStripped("avi-info.avi", AviHandler())
+        assertTrue("$check", check == DecodeCheck.Passed || check == DecodeCheck.Skipped)
     }
 
     @Test
