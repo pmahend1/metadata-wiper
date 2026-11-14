@@ -38,6 +38,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
     private val items = mutableListOf<MetadataItem>()
     private val warnings = linkedSetOf<MetadataWarning>()
     private val blanked = mutableListOf<BlankedRange>()
+    private val sampleBlanked = mutableListOf<BlankedRange>()
     private val imageData = mutableListOf<FileSpan>()
     private val removedTopLevel = mutableSetOf<Box>()
     private var hasMovie = false
@@ -164,6 +165,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
         items += plan.items
         warnings += plan.warnings
         blanked += plan.blanked
+        sampleBlanked += plan.sampleBlanked
         imageData += plan.keptChunks
     }
 
@@ -437,7 +439,11 @@ class HeifStripPlanner(private val reader: BinaryReader,
         return meta.properties.any { it.index in indices && it.box.type == AUXC && it.subtype in alphaAuxiliaryTypes }
     }
 
-    // Overlapping overwrites would depend on order, and overwriting image data would corrupt the picture.
+    /*
+     * Overlapping overwrites would depend on order, and overwriting image data would corrupt the
+     * picture. The movie planner's ranges inside sequence samples are the one exception, and it
+     * has already checked them against its own ranges.
+     */
     private fun checkedBlanked(): List<BlankedRange> {
         val sorted = blanked.filter { it.span.length > 0 }.sortedBy { it.span.start }
         for ((previous, next) in sorted.zipWithNext()) {
@@ -449,7 +455,7 @@ class HeifStripPlanner(private val reader: BinaryReader,
         if (overlapped != null) {
             throw MalformedFileException("HEIF metadata at offset ${overlapped.start} overlaps image data")
         }
-        return sorted
+        return (sorted + sampleBlanked).sortedBy { it.span.start }
     }
 
     /*

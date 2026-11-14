@@ -39,6 +39,7 @@ class IsoMediaHandlerTest {
         harness.assertHas(items, MetadataCategory.DateTime, "Track timestamps", "2")
         harness.assertHas(items, MetadataCategory.Software, "Compressor name", "Lavc libx264")
         assertTrue(items.any { it.label == "XMP" })
+        assertTrue(items.any { it.label == "Encoder settings" && it.detail.startsWith("x264 core ") })
     }
 
     @Test
@@ -93,15 +94,21 @@ class IsoMediaHandlerTest {
         }
     }
 
+    // x264 signs every stream with its settings in SEI user data; that's blanked to 0xFF, and every other sample byte stays.
     @Test
-    fun keepsSamplesByteForByte() {
+    fun keepsSamplesByteForByteApartFromStreamUserData() {
+        val settings = "x264 - core".toByteArray()
         for (name in fixtures) {
             val input = harness.fixture(name)
             val output = harness.strip(input).first
             val mediaData = topLevel(input).filter { it.type == "mdat" }
             assertTrue(name, mediaData.isNotEmpty())
             for (box in mediaData) {
-                assertArrayEquals(name, input.copyOfRange(box.start.toInt(), box.end.toInt()), output.copyOfRange(box.start.toInt(), box.end.toInt()))
+                val before = input.copyOfRange(box.start.toInt(), box.end.toInt())
+                val after = output.copyOfRange(box.start.toInt(), box.end.toInt())
+                assertTrue(name, before.indexOf(settings) >= 0)
+                assertEquals(name, -1, after.indexOf(settings))
+                assertTrue(name, before.indices.all { before[it] == after[it] || after[it] == 0xFF.toByte() })
             }
             assertEquals(name, chunkSpans(input), chunkSpans(output))
         }

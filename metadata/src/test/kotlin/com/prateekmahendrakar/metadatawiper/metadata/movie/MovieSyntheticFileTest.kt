@@ -211,18 +211,6 @@ class MovieSyntheticFileTest {
     }
 
     @Test
-    fun warnsAboutCamerasThatWriteIntoTheVideoStream() {
-        val xavc = MovieBuilder(listOf(video()))
-        xavc.majorBrand = "XAVC"
-        assertWarns(xavc, MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked))
-
-        val panasonic = MovieBuilder(listOf(video()))
-        panasonic.moovExtras = listOf(box("udta", box("PANA", ByteArray(8))))
-        assertWarns(panasonic, MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked))
-        assertEquals(emptyList<MetadataWarning>(), harness.inspect(MovieBuilder(listOf(video())).build().bytes).warnings)
-    }
-
-    @Test
     fun zeroesVersionOneTimestamps() {
         val time = ByteArray(8) { 0x11 }
         val header = fullBox("mvhd", 1, 0, time, time, u32(1000), ByteArray(8), ByteArray(80))

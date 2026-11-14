@@ -16,6 +16,7 @@ import com.prateekmahendrakar.metadatawiper.metadata.jpeg.JpegHandler
 import com.prateekmahendrakar.metadatawiper.metadata.matroska.MatroskaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.movie.IsoMediaHandler
 import com.prateekmahendrakar.metadatawiper.metadata.mpeg.MpegStreamHandler
+import com.prateekmahendrakar.metadatawiper.metadata.mpeg.TransportStreamHandler
 import com.prateekmahendrakar.metadatawiper.metadata.png.PngHandler
 import com.prateekmahendrakar.metadatawiper.metadata.webp.WebPHandler
 import com.prateekmahendrakar.metadatawiper.model.PrivacySettings
@@ -76,8 +77,8 @@ class WipeViewModel(private val wipeFiles: WipeFilesUseCase,
                                                                             MatroskaHandler(FileFormat.Matroska),
                                                                             MatroskaHandler(FileFormat.WebM),
                                                                             AviHandler(),
-                                                                            MpegStreamHandler(FileFormat.MpegTs),
-                                                                            MpegStreamHandler(FileFormat.MpegPs))))
+                                                                            TransportStreamHandler(),
+                                                                            MpegStreamHandler())))
                 WipeViewModel(useCase, tempFileStore, SharedFileStore(application))
             }
         }

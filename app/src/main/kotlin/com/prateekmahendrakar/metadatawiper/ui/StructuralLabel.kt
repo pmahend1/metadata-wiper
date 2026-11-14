@@ -81,7 +81,10 @@ object StructuralLabel {
                                                        MetadataLabel.SEGMENT_ID to R.string.label_segment_id,
                                                        MetadataLabel.ATTACHED_FILE to R.string.label_attached_file,
                                                        MetadataLabel.TAGS to R.string.label_tags,
-                                                       MetadataLabel.UNKNOWN_ELEMENT to R.string.label_unrecognized)
+                                                       MetadataLabel.UNKNOWN_ELEMENT to R.string.label_unrecognized,
+                                                       MetadataLabel.RECORDING_DATA to R.string.label_recording_data,
+                                                       MetadataLabel.ENCODER_SETTINGS to R.string.label_encoder_settings,
+                                                       MetadataLabel.STREAM_USER_DATA to R.string.label_stream_user_data)
 
     private val notes = mapOf(MetadataLabel.LINKED_PROFILE_PATH to R.string.note_linked_profile)
 
