@@ -75,6 +75,9 @@ object MetadataLabel {
     const val ATTACHED_FILE = "Attached file"
     const val TAGS = "Tags"
     const val UNKNOWN_ELEMENT = "Unknown element"
+    const val RECORDING_DATA = "Recording data"
+    const val ENCODER_SETTINGS = "Encoder settings"
+    const val STREAM_USER_DATA = "Stream user data"
 
     val all = listOf(EXIF_BLOCK,
                      XMP,
@@ -141,7 +144,10 @@ object MetadataLabel {
                      SEGMENT_ID,
                      ATTACHED_FILE,
                      TAGS,
-                     UNKNOWN_ELEMENT)
+                     UNKNOWN_ELEMENT,
+                     RECORDING_DATA,
+                     ENCODER_SETTINGS,
+                     STREAM_USER_DATA)
 
     // endregion State
 }

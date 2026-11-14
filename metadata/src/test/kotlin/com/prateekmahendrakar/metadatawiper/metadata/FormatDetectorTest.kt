@@ -113,7 +113,9 @@ class FormatDetectorTest {
                                     "3gp-" to FileFormat.ThreeGpp,
                                     "mkv-" to FileFormat.Matroska,
                                     "webm-" to FileFormat.WebM,
-                                    "avi-" to FileFormat.Avi)
+                                    "avi-" to FileFormat.Avi,
+                                    "ts-" to FileFormat.MpegTs,
+                                    "m2ts-" to FileFormat.MpegTs)
         val fixtures = File(javaClass.getResource("/fixtures")!!.toURI()).listFiles()!!.sortedBy { it.name }
         assertTrue(fixtures.isNotEmpty())
 

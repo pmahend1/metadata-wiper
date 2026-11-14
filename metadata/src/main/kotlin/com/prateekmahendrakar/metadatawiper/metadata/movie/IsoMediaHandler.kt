@@ -34,7 +34,7 @@ class IsoMediaHandler(override val format: FileFormat) : FormatHandler {
                        options: StripOptions): StripReport {
         val reader = BinaryReader(input)
         val plan = MovieStripPlanner(reader).plan()
-        BlankedCopy.write(reader, output, plan.blanked, plan.outputLength)
+        BlankedCopy.write(reader, output, plan.allBlanked, plan.outputLength)
 
         // Rotation lives in the kept `tkhd` matrix, so no orientation item is ever reported or written.
         return StripReport.of(plan.items, plan.warnings, options, orientationWritten = false)

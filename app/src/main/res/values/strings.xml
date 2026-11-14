@@ -134,6 +134,9 @@
     <string name="label_segment_id">File ID (links related videos)</string>
     <string name="label_attached_file">Attached file</string>
     <string name="label_tags">Tags</string>
+    <string name="label_recording_data">Camcorder data in the video stream</string>
+    <string name="label_encoder_settings">Encoder settings</string>
+    <string name="label_stream_user_data">Data in the video stream</string>
     <string name="warning_damaged_exif">An EXIF block is damaged, so its contents can\'t be listed. It is removed all the same.</string>
     <string name="warning_thumbnail_kept">The preview thumbnail was kept, because removing it can stop the image from opening.</string>
     <string name="warning_auxiliary_kept">Auxiliary images, such as a depth map or HDR gain map, were kept.</string>
@@ -142,7 +145,6 @@
     <string name="warning_unknown_properties">Image properties this app doesn\'t recognize (%s) were left in place.</string>
     <string name="warning_subtitles_kept">Subtitle tracks were kept. Some drones write their position into them, so check them if that matters.</string>
     <string name="warning_chapters_kept">Chapter titles were kept.</string>
-    <string name="warning_in_stream_not_checked">This camera can store the date and location inside the video stream, which this app doesn\'t check yet.</string>
     <string name="warning_unreferenced_kept">%s bytes inside the video aren\'t used by any track, but this file has data that might still point to them, so they were left in place.</string>
     <string name="warning_unknown_tracks">Tracks of a type this app doesn\'t recognize (%s) were left in place.</string>
     <string name="warning_fonts_kept">Fonts attached for subtitles were kept, so styled subtitles still show. Their file names were removed.</string>

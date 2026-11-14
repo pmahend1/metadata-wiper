@@ -2,7 +2,7 @@
 Generates the video fixtures in metadata/src/test/resources/fixtures/ for the :metadata unit
 tests. The output is committed, so tests don't need these tools installed.
 
-Requires ffmpeg (with libx264, libvpx-vp9 and libopus) and exiftool on PATH. Kept apart from
+Requires ffmpeg 7 or later (with libx264, libx265, libvpx-vp9 and libopus) and exiftool on PATH. Kept apart from
 generate-fixtures.ps1 so regenerating videos never rewrites the image fixtures, whose bytes
 depend on the ImageMagick and libheif versions.
 All metadata is fake: no fixture may contain personal data.
@@ -170,9 +170,51 @@ try {
     )
 
     # endregion AVI
+
+    # region In-stream user data
+
+    <#
+    AVCHD and XAVC camcorders write the recording date and GPS as an MDPM block in H.264 SEI user
+    data. ffmpeg can't write one from scratch, so h264_metadata inserts a fake one after
+    filter_units has dropped x264's own SEI, which leaves MDPM the only user data, as on a camera.
+    The option is a C string, so the block has no zero bytes: its rationals use 0x0101 rather than
+    1 as the denominator. It isn't text either, so ffmpeg reads the option from a file (-/bsf:v).
+    #>
+    $mdpmEntries = @(
+        0x18, 0x02, 0x20, 0x26, 0x09,   # time zone +01:00, 2026-09
+        0x19, 0x12, 0x14, 0x30, 0x15,   # the 12th, 14:30:15
+        0xB1, 0x4E, 0x20, 0x20, 0x20,   # latitude ref "N"
+        0xB2, 0x30, 0x30, 0x01, 0x01,   # 48°
+        0xB3, 0x33, 0x33, 0x01, 0x01,   # 51'
+        0xB4, 0x73, 0x93, 0x03, 0xE8,   # 29.587"
+        0xB5, 0x45, 0x20, 0x20, 0x20,   # longitude ref "E"
+        0xB6, 0x02, 0x02, 0x01, 0x01,   # 2°
+        0xB7, 0x11, 0x11, 0x01, 0x01,   # 17'
+        0xB8, 0x9D, 0x08, 0x03, 0xE8    # 40.2"
+    )
+    $ascii = [System.Text.Encoding]::ASCII
+    $mdpm = [byte[]] ($ascii.GetBytes('MDPM') + [byte] ($mdpmEntries.Count / 5) + $mdpmEntries)
+    $mdpmFilter = Join-Path $work 'mdpm-bsf.txt'
+    $filterText = 'filter_units=remove_types=6,h264_metadata=sei_user_data=17ee8c60-f84d-11d9-8cd6-0800200c9a66+'
+    [System.IO.File]::WriteAllBytes($mdpmFilter, [byte[]] ($ascii.GetBytes($filterText) + $mdpm))
+    $h264Mdpm = @('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '40', '-pix_fmt', 'yuv420p', '-/bsf:v', $mdpmFilter)
+
+    # AVCHD: 192-byte M2TS packets, H.264 with MDPM, AC-3 audio.
+    New-Video (Fixture 'm2ts-camcorder.m2ts') ($h264Mdpm + @('-c:a', 'ac3', '-b:a', '64k', '-f', 'mpegts', '-mpegts_m2ts_mode', '1'))
+
+    # Sony XAVC S: the same MDPM, in length-prefixed MP4 samples.
+    New-Video (Fixture 'mp4-xavc.mp4') ($h264Mdpm + @('-c:a', 'aac', '-b:a', '16k', '-brand', 'XAVC') + $bitExact)
+
+    # HEVC in 188-byte TS packets, with the encoder settings x265 writes as SEI user data.
+    New-Video (Fixture 'ts-hevc.ts') @(
+        '-c:v', 'libx265', '-preset', 'ultrafast', '-crf', '40', '-pix_fmt', 'yuv420p', '-x265-params', 'log-level=none',
+        '-c:a', 'aac', '-b:a', '16k', '-f', 'mpegts'
+    )
+
+    # endregion In-stream user data
 } finally {
     Remove-Item -Recurse -Force $work
 }
 
-Get-ChildItem $fixtures -Include *.mp4, *.mov, *.3gp, *.m4v, *.mkv, *.webm, *.avi -Recurse |
+Get-ChildItem $fixtures -Include *.mp4, *.mov, *.3gp, *.m4v, *.mkv, *.webm, *.avi, *.ts, *.m2ts -Recurse |
     Sort-Object Name | Format-Table Name, Length -AutoSize

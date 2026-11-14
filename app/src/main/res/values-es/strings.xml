@@ -137,6 +137,9 @@
     <string name="label_segment_id">ID de archivo (vincula vídeos relacionados)</string>
     <string name="label_attached_file">Archivo adjunto</string>
     <string name="label_tags">Etiquetas</string>
+    <string name="label_recording_data">Datos de la videocámara en la secuencia de vídeo</string>
+    <string name="label_encoder_settings">Ajustes del codificador</string>
+    <string name="label_stream_user_data">Datos en la secuencia de vídeo</string>
     <string name="warning_damaged_exif">Un bloque EXIF está dañado, así que no se puede mostrar su contenido. Se elimina igualmente.</string>
     <string name="warning_thumbnail_kept">Se conservó la miniatura de vista previa, porque quitarla puede impedir que la imagen se abra.</string>
     <string name="warning_auxiliary_kept">Se conservaron las imágenes auxiliares, como un mapa de profundidad o de ganancia HDR.</string>
@@ -145,7 +148,6 @@
     <string name="warning_unknown_properties">Se dejaron sin cambios propiedades de imagen que esta app no reconoce (%s).</string>
     <string name="warning_subtitles_kept">Se conservaron las pistas de subtítulos. Algunos drones escriben en ellas su posición, así que revísalas si te importa.</string>
     <string name="warning_chapters_kept">Se conservaron los títulos de los capítulos.</string>
-    <string name="warning_in_stream_not_checked">Esta cámara puede guardar la fecha y la ubicación dentro de la secuencia de vídeo, algo que esta app aún no comprueba.</string>
     <string name="warning_unreferenced_kept">Hay %s bytes dentro del vídeo que ninguna pista usa, pero este archivo tiene datos que aún podrían apuntar a ellos, así que se dejaron sin cambios.</string>
     <string name="warning_unknown_tracks">Se dejaron sin cambios pistas de un tipo que esta app no reconoce (%s).</string>
     <string name="warning_fonts_kept">Se conservaron las fuentes adjuntas para los subtítulos, para que los subtítulos con estilo se sigan viendo. Se quitaron sus nombres de archivo.</string>

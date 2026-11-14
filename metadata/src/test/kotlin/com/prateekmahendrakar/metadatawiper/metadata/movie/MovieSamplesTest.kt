@@ -107,12 +107,6 @@ class MovieSamplesTest {
     }
 
     @Test
-    fun warnsThatSonyCamerasAlsoWriteIntoTheVideoStream() {
-        val input = MovieBuilder(listOf(video(), telemetry("rtmd"))).build().bytes
-        assertEquals(listOf(MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked)), harness.inspect(input).warnings)
-    }
-
-    @Test
     fun freesReferencesToRemovedTracksOnly() {
         val references = box("tref", box("cdsc", u32(2)), box("tmcd", u32(3)))
         val timecode = MovieTestTrack("tmcd", "tmcd", listOf(listOf(ByteArray(4))))
@@ -134,7 +128,7 @@ class MovieSamplesTest {
 
             assertTrue(name, report.removed.any { it.label == "Telemetry track" && it.detail == "gpmd" })
             assertEquals(name, 1, tracks(output).size)
-            assertKept(input, output, chunks[0])
+            assertKeptApartFromUserData(input, output, chunks[0])
             assertZeroed(output, chunks[1])
             assertClean(output)
         }
@@ -242,6 +236,15 @@ class MovieSamplesTest {
                            spans: List<FileSpan>) {
         for (span in spans) {
             assertArrayEquals(input.copyOfRange(span.start.toInt(), span.end.toInt()), output.copyOfRange(span.start.toInt(), span.end.toInt()))
+        }
+    }
+
+    // x264's settings in the video's SEI user data become 0xFF; nothing else in a kept chunk changes.
+    private fun assertKeptApartFromUserData(input: ByteArray,
+                                            output: ByteArray,
+                                            spans: List<FileSpan>) {
+        for (span in spans) {
+            assertTrue((span.start.toInt() until span.end.toInt()).all { input[it] == output[it] || output[it] == 0xFF.toByte() })
         }
     }
 

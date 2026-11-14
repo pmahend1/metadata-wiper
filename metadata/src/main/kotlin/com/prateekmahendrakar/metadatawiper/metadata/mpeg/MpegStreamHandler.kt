@@ -11,16 +11,18 @@ import java.io.OutputStream
 import java.nio.channels.SeekableByteChannel
 
 /*
- * MPEG transport and program streams (.ts, .m2ts, .mts, .mpg) have no container metadata to
- * strip, but camcorders write the recording date, time and GPS into the video stream itself
- * (H.264 SEI `MDPM`, MPEG-2 `user_data`). Without parsing that stream a file can't be shown to
- * be clean, so both calls refuse it with the reason rather than report "nothing found".
+ * MPEG program streams (.mpg, .vob) have no container metadata to strip, but camcorders write
+ * the recording date and time into the MPEG-2 video stream's `user_data`, which isn't parsed.
+ * Without that a file can't be shown to be clean, so both calls refuse it with the reason
+ * rather than report "nothing found".
  */
-class MpegStreamHandler(override val format: FileFormat) : FormatHandler {
+class MpegStreamHandler : FormatHandler {
 
-    init {
-        require(format in setOf(FileFormat.MpegTs, FileFormat.MpegPs)) { "MpegStreamHandler doesn't handle $format" }
-    }
+    // region State
+
+    override val format = FileFormat.MpegPs
+
+    // endregion State
 
     // region Methods
 
