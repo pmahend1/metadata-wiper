@@ -26,7 +26,8 @@ import java.time.Instant
  * Each level of the box tree has an allowlist, and anything else is freed. Timed-metadata tracks
  * are freed and timecode tracks kept, and both have their samples zeroed in `mdat`, where they'd
  * otherwise stay readable. So do bytes in `mdat` that no track references, as long as every
- * structure that can point there is understood (see planGaps).
+ * structure that can point there is understood (see planGaps). Inside kept video samples, only
+ * SEI user data is overwritten (see MovieStreamScanner).
  */
 class MovieStripPlanner(private val reader: BinaryReader) {
 
@@ -36,6 +37,7 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     private val trackReader = MovieTrackReader(reader, boxReader)
     private val metadataReader = MovieMetadataReader(reader, boxReader)
     private val fragmentReader = MovieFragmentReader(reader, boxReader)
+    private val streamScanner = MovieStreamScanner(reader)
 
     private val items = mutableListOf<MetadataItem>()
     private val warnings = linkedSetOf<MetadataWarning>()
@@ -80,7 +82,6 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         const val MVEX = "mvex"
         const val PRFT = "prft"
         const val SAIO = "saio"
-        const val RTMD = "rtmd"
         const val TMCD = "tmcd"
         const val FREE = "free"
         const val SKIP = "skip"
@@ -99,15 +100,11 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         const val CMOV = "cmov"
         const val PSSH = "pssh"
 
-        const val XAVC_BRAND = "XAVC"
-        const val PANASONIC_BOX = "PANA"
         const val SAMSUNG_SIGNATURE = "SEFT"
         const val SIGNATURE_SIZE = 4
 
         const val V0_TIME_SIZE = 4L
         const val V1_TIME_SIZE = 8L
-        const val BRAND_SIZE = 4
-        const val MINOR_VERSION_SIZE = 4L
         const val TRACK_ID_SIZE = 4L
         const val NTP_TIME_SIZE = 8L
 
@@ -138,7 +135,6 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         val movie = movieBox(topLevel.boxes)
         val mediaData = topLevel.boxes.filter { it.type == MDAT }.map { FileSpan(it.dataStart, it.end) }
 
-        planInStreamWarning(topLevel.boxes)
         planMovie(movie, topLevel.boxes.filter { it.type == MOOF }, mediaData)
         planTopLevel(topLevel.boxes)
         planTrailing(topLevel.trailing, keptChunks + zeroedChunks)
@@ -147,7 +143,12 @@ class MovieStripPlanner(private val reader: BinaryReader) {
 
         val outputLength = outputLength(topLevel)
         val blankedRanges = checkedBlanked()
-        return MovieStripPlan(items.toList(), warnings.toList(), blankedRanges.filter { it.span.start < outputLength }, outputLength, keptChunks.toList())
+        return MovieStripPlan(items.toList(),
+                              warnings.toList(),
+                              blankedRanges.filter { it.span.start < outputLength },
+                              checkedSampleBlanked(blankedRanges),
+                              outputLength,
+                              keptChunks.toList())
     }
 
     // Plans just a `moov`, for a container that has its own idea of what else is in the file (a HEIF image sequence).
@@ -155,7 +156,8 @@ class MovieStripPlanner(private val reader: BinaryReader) {
                      mediaData: List<FileSpan>): MovieStripPlan {
         planMovie(moov, emptyList(), mediaData)
         addSummaries()
-        return MovieStripPlan(items.toList(), warnings.toList(), checkedBlanked(), reader.size, keptChunks.toList())
+        val blankedRanges = checkedBlanked()
+        return MovieStripPlan(items.toList(), warnings.toList(), blankedRanges, checkedSampleBlanked(blankedRanges), reader.size, keptChunks.toList())
     }
 
     private fun movieBox(topLevel: List<Box>): Box {
@@ -172,26 +174,6 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         }
         if (movieChildren.any { it.type == PSSH }) {
             throw UnsupportedFileException(UnsupportedReason.Encrypted, "Encrypted movies can't be cleaned")
-        }
-    }
-
-    /*
-     * Sony XAVC and some Panasonic cameras write the date and GPS into the H.264 stream, which
-     * is out of reach here. Warning on every file would be noise, so only these cameras get it.
-     */
-    private fun planInStreamWarning(topLevel: List<Box>) {
-        val ftyp = topLevel.firstOrNull { it.type == FTYP }
-        if (ftyp != null && XAVC_BRAND in brands(ftyp)) {
-            warnings += MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked)
-        }
-    }
-
-    private fun brands(ftyp: Box): List<String> {
-        val brandBytes = ftyp.end - ftyp.dataStart
-        val offsets = (0L until brandBytes - BRAND_SIZE + 1 step BRAND_SIZE.toLong()).filter { it != MINOR_VERSION_SIZE }
-        return offsets.map {
-            reader.seek(ftyp.dataStart + it)
-            String(reader.readBytes(BRAND_SIZE), Charsets.ISO_8859_1)
         }
     }
 
@@ -239,20 +221,13 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     private fun describe(box: Box): List<MetadataItem> {
         val size = box.end - box.start
         return when (box.type) {
-            UDTA -> metadataReader.read(box).also { planPanasonicWarning(it) }
-            META -> metadataReader.read(box)
+            UDTA, META -> metadataReader.read(box)
             UUID -> if (metadataReader.isXmp(box)) {
                 listOf(MetadataItem(MetadataCategory.Other, MetadataLabel.XMP, byteSize = size))
             } else {
                 listOf(MetadataItem(MetadataCategory.Other, MetadataLabel.UNKNOWN_BOX, box.type, size))
             }
             else -> listOf(MetadataItem(MetadataCategory.Other, MetadataLabel.UNKNOWN_BOX, box.type, size))
-        }
-    }
-
-    private fun planPanasonicWarning(userData: List<MetadataItem>) {
-        if (userData.any { it.label == MetadataLabel.VENDOR_DATA && it.detail == PANASONIC_BOX }) {
-            warnings += MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked)
         }
     }
 
@@ -387,7 +362,10 @@ class MovieStripPlanner(private val reader: BinaryReader) {
             TrackKind.Subtitle -> warnings += MetadataWarning(MetadataWarningKind.SubtitleTracksKept)
             TrackKind.Chapter -> warnings += MetadataWarning(MetadataWarningKind.ChaptersKept)
             TrackKind.Unknown -> unknownHandlers += track.handlerType
-            TrackKind.Video -> track.sampleEntries.forEach { planCompressorName(it) }
+            TrackKind.Video -> {
+                track.sampleEntries.forEach { planCompressorName(it) }
+                streamScanner.scan(track, chunks)
+            }
             else -> Unit
         }
 
@@ -404,11 +382,7 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     // The whole `trak` goes, but its samples would stay readable in `mdat` to anything that scans for them.
     private fun planTelemetry(track: MovieTrack,
                               chunks: List<FileSpan>) {
-        val formats = track.sampleEntries.map { it.type }
-        if (RTMD in formats) {
-            warnings += MetadataWarning(MetadataWarningKind.InStreamMetadataNotChecked)
-        }
-        val format = formats.firstOrNull() ?: track.handlerType
+        val format = track.sampleEntries.firstOrNull()?.type ?: track.handlerType
         items += MetadataItem(MetadataCategory.Location, MetadataLabel.TELEMETRY_TRACK, format, chunks.sumOf { it.length })
         blanked += FreedBox.ranges(track.box)
         zeroedChunks += chunks
@@ -513,6 +487,7 @@ class MovieStripPlanner(private val reader: BinaryReader) {
     }
 
     private fun addSummaries() {
+        items += streamScanner.items()
         if (timestampedTracks > 0) {
             items += MetadataItem(MetadataCategory.DateTime, MetadataLabel.TRACK_TIMESTAMPS, timestampedTracks.toString(), trackTimestampBytes)
         }
@@ -635,6 +610,21 @@ class MovieStripPlanner(private val reader: BinaryReader) {
         val overlapped = FileSpan.firstOverlap(sorted.map { it.span }, keptChunks)
         if (overlapped != null) {
             throw MalformedFileException("Movie metadata at offset ${overlapped.start} overlaps sample data")
+        }
+        return sorted
+    }
+
+    // Two video tracks sharing a chunk would blank its user data twice.
+    private fun checkedSampleBlanked(structural: List<BlankedRange>): List<BlankedRange> {
+        val sorted = streamScanner.blanked.sortedBy { it.span.start }
+        for ((previous, next) in sorted.zipWithNext()) {
+            if (previous.span.overlaps(next.span)) {
+                throw MalformedFileException("Video stream user data at offset ${next.span.start} is in two tracks")
+            }
+        }
+        val overlapped = FileSpan.firstOverlap(sorted.map { it.span }, structural.map { it.span })
+        if (overlapped != null) {
+            throw MalformedFileException("Video stream user data at offset ${overlapped.start} overlaps movie metadata")
         }
         return sorted
     }

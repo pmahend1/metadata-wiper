@@ -13,8 +13,9 @@ object CleanedFileName {
     private const val RANDOM_NAME_LENGTH = 12
     private const val HEX_DIGITS = "0123456789abcdef"
 
-    // Other names for a format. An M4V is an MP4, but people expect it to stay an M4V.
-    private val extensionAliases = mapOf(FileFormat.Mp4 to setOf("m4v"))
+    // Other names for a format. An M4V is an MP4, but people expect it to stay an M4V, and a camcorder's .MTS an .mts.
+    private val extensionAliases = mapOf(FileFormat.Mp4 to setOf("m4v"),
+                                         FileFormat.MpegTs to setOf("m2ts", "mts", "m2t"))
 
     // endregion State
 

@@ -44,6 +44,9 @@ class CleanedFileNameTest {
     fun keepsAnAliasOfTheDetectedFormat() {
         assertEquals("clip_cleaned.m4v", CleanedFileName.of("clip.M4V", FileFormat.Mp4))
         assertEquals("clip_cleaned.mp4", CleanedFileName.of("clip.mp4", FileFormat.Mp4))
+        assertEquals("00012_cleaned.mts", CleanedFileName.of("00012.MTS", FileFormat.MpegTs))
+        assertEquals("clip_cleaned.m2ts", CleanedFileName.of("clip.m2ts", FileFormat.MpegTs))
+        assertEquals("clip_cleaned.ts", CleanedFileName.of("clip.ts", FileFormat.MpegTs))
     }
 
     @Test

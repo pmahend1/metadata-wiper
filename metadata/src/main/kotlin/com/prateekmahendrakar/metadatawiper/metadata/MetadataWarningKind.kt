@@ -17,9 +17,6 @@ enum class MetadataWarningKind {
     // Matroska fonts that styled subtitles need. Their file names are blanked.
     FontAttachmentsKept,
 
-    // A camera known to write the date and location into the video stream itself, which isn't parsed yet.
-    InStreamMetadataNotChecked,
-
     // Bytes in `mdat` that no track references, in a file with other structures that might. Its one type is the size in bytes.
     UnreferencedDataKept,
     UnknownBoxesKept,
