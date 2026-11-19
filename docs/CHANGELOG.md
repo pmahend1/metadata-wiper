@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 16-Nov-2026
+
+### New
+
+- **Videos**: Cleans MP4, MOV, 3GP, M4V, MKV, WebM, AVI and MPEG-TS (.ts, .mts, .m2ts) videos, as well as images.
+- **No Re-encoding**: Metadata is removed without re-encoding the video, so the picture and sound are unchanged.
+- **Removes Video Metadata**: Removes location, camera make and model, recording dates, titles, tags, track names, cover art and attachments. Also removes telemetry tracks that can hold GPS (from action cameras and drones), timecode, Samsung data after the video, and the camcorder date and location stored inside the video stream.
+- **Progress and Cancel**: Shows which file is being cleaned and how far along it is, with a Cancel button. The screen stays on while files are being cleaned.
+- **Free Space Check**: Before cleaning, the app tells you how much free space it needs, and says so up front if there isn't enough instead of failing part-way.
+- **Add More and Remove**: Add more files from the review screen, or remove one before cleaning.
+- **Video Previews**: Videos show a preview frame, made on your device.
+
+### Improvements
+
+- **Image Sequences**: Dates are now removed from HEIC image sequences too, instead of being kept with a warning.
+- **Clear Reasons**: Videos the app can't clean yet, such as MPEG program streams (.mpg), encrypted videos and videos that depend on other files, are shown as unsupported with the reason.
+- **Honest Results**: When something is kept, such as subtitle tracks (some drones write their position into them), chapter titles or subtitle fonts, the results say so.
+- **Clearer Wording**: Screens say "photos and videos" and "files" instead of "images", in English and Spanish.
+
 ## [2.0.0] - 26-Oct-2026
 
 ### New
