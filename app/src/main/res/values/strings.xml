@@ -30,6 +30,10 @@
         <item quantity="one">%d file can\'t be cleaned: its format isn\'t supported yet, or it is damaged. It will be skipped.</item>
         <item quantity="other">%d files can\'t be cleaned: their format isn\'t supported yet, or they are damaged. They will be skipped.</item>
     </plurals>
+    <plurals name="files_will_be_skipped">
+        <item quantity="one">%d file can\'t be cleaned and will be skipped.</item>
+        <item quantity="other">%d files can\'t be cleaned and will be skipped.</item>
+    </plurals>
     <plurals name="files_can_be_cleaned">
         <item quantity="one">%d file can be cleaned. It holds:</item>
         <item quantity="other">%d files can be cleaned. They hold:</item>
