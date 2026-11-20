@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.prateekmahendrakar.metadatawiper.R
 import com.prateekmahendrakar.metadatawiper.metadata.MetadataCategory
@@ -87,10 +88,16 @@ fun BatchReview(files: List<SelectedFile>,
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(modifier = Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     if (hasLocation) {
-                        LegendEntry(MaterialTheme.colorScheme.error, stringResource(id = R.string.legend_location))
+                        LegendEntry(icon = R.drawable.location_on_24px,
+                                    background = MaterialTheme.colorScheme.surface,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    text = stringResource(id = R.string.legend_location))
                     }
                     if (hasUncleanable) {
-                        LegendEntry(MaterialTheme.colorScheme.inverseSurface, stringResource(id = R.string.legend_unsupported))
+                        LegendEntry(icon = R.drawable.block_24px,
+                                    background = MaterialTheme.colorScheme.inverseSurface,
+                                    tint = MaterialTheme.colorScheme.inverseOnSurface,
+                                    text = stringResource(id = R.string.legend_unsupported))
                     }
                 }
             }
@@ -162,6 +169,14 @@ private fun Thumbnail(file: SelectedFile,
                       contentDescription = file.displayName,
                       modifier = Modifier.fillMaxSize())
         if (file.canBeCleaned == false) {
+            /*
+             * Washed out so a skipped file doesn't read like a cleanable video with no preview frame.
+             * inverseSurface rather than scrim: a black scrim on a dark tile in dark theme is lost
+             * against the page background.
+             */
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.inverseSurface.copy(alpha = UNCLEANABLE_OVERLAY_ALPHA)))
             Badge(R.drawable.block_24px, MaterialTheme.colorScheme.inverseSurface, MaterialTheme.colorScheme.inverseOnSurface)
         } else if (hasLocation) {
             Badge(R.drawable.location_on_24px, MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.error)
@@ -197,23 +212,41 @@ private fun Badge(@DrawableRes icon: Int,
         .fillMaxSize()
         .padding(6.dp),
         contentAlignment = Alignment.TopEnd) {
-        Box(modifier = Modifier
-            .size(26.dp)
-            .shadow(2.dp, CircleShape)
-            .background(background, CircleShape),
-            contentAlignment = Alignment.Center) {
-            Icon(painter = painterResource(id = icon), contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
-        }
+        BadgeIcon(icon = icon,
+                  background = background,
+                  tint = tint,
+                  modifier = Modifier
+                      .size(26.dp)
+                      .shadow(2.dp, CircleShape),
+                  iconSize = 16.dp)
     }
 }
 
 @Composable
-private fun LegendEntry(color: Color,
+private fun BadgeIcon(@DrawableRes icon: Int,
+                      background: Color,
+                      tint: Color,
+                      modifier: Modifier,
+                      iconSize: Dp) {
+    Box(modifier = modifier.background(background, CircleShape), contentAlignment = Alignment.Center) {
+        Icon(painter = painterResource(id = icon), contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
+    }
+}
+
+// The same badge as on the thumbnails, so the legend maps onto what's in the grid.
+@Composable
+private fun LegendEntry(@DrawableRes icon: Int,
+                        background: Color,
+                        tint: Color,
                         text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(modifier = Modifier
-            .size(10.dp)
-            .background(color, CircleShape))
+        BadgeIcon(icon = icon,
+                  background = background,
+                  tint = tint,
+                  modifier = Modifier.size(20.dp),
+                  iconSize = 13.dp)
         Text(text = text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+private const val UNCLEANABLE_OVERLAY_ALPHA = 0.55f

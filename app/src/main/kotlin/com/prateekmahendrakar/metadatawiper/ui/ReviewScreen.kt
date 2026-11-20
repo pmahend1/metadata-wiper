@@ -70,7 +70,7 @@ fun ReviewScreen(state: WipeUiState,
                                                              onResult = onAddFiles)
 
     val context = LocalContext.current
-    val note = when {
+    val actionNote = when {
         canSave == false -> spaceNote(spaceToSave, state.freeSpace)
         canShare == false -> spaceNote(spaceToShare, state.freeSpace)
         overwriteOriginal && state.canOverwrite == false -> stringResource(id = R.string.shared_files_saved_elsewhere)
@@ -78,6 +78,13 @@ fun ReviewScreen(state: WipeUiState,
         spaceToSave > 0 && files.any { it.format.isVideo } -> stringResource(id = R.string.space_needed, Formatter.formatShortFileSize(context, spaceToSave))
         else -> null
     }
+    // The summary card that says the same scrolls away with the grid, so the action bar repeats it.
+    val skippedNote = if (files.size > 1 && state.uncleanableCount > 0) {
+        pluralStringResource(id = R.plurals.files_will_be_skipped, count = state.uncleanableCount, state.uncleanableCount)
+    } else {
+        null
+    }
+    val note = listOfNotNull(skippedNote, actionNote).joinToString(separator = "\n").ifEmpty { null }
 
     Scaffold(topBar = {
         Column {

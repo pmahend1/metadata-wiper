@@ -31,6 +31,11 @@
         <item quantity="many">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados. Se omitirán.</item>
         <item quantity="other">%d archivos no se pueden limpiar: su formato aún no es compatible o están dañados. Se omitirán.</item>
     </plurals>
+    <plurals name="files_will_be_skipped">
+        <item quantity="one">%d archivo no se puede limpiar y se omitirá.</item>
+        <item quantity="many">%d archivos no se pueden limpiar y se omitirán.</item>
+        <item quantity="other">%d archivos no se pueden limpiar y se omitirán.</item>
+    </plurals>
     <plurals name="files_can_be_cleaned">
         <item quantity="one">Se puede limpiar %d archivo. Contiene:</item>
         <item quantity="many">Se pueden limpiar %d archivos. Contienen:</item>
